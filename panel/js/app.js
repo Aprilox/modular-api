@@ -103,8 +103,7 @@ function updateCodeHelp(language) {
     javascript: `<strong>Variables:</strong> request, params, query, body, headers<br>
                  <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
     python: `<strong>Variables:</strong> request, params, query, body, headers<br>
-             <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`,
-    bash: `<strong>Sortie:</strong> Retournez du JSON, ex: ConvertTo-Json @{key="value"}`
+             <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`
   };
   helpEl.innerHTML = helps[language] || helps.javascript;
 }
@@ -294,8 +293,7 @@ function openIDE() {
 function updateIDEHelp(language) {
   const helps = {
     javascript: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
-    python: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`,
-    bash: `<strong>Sortie:</strong> Retournez du JSON, ex: ConvertTo-Json @{key="value"}`
+    python: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`
   };
   document.getElementById('ide-help').innerHTML = helps[language] || helps.javascript;
 }

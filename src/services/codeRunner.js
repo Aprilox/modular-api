@@ -1,6 +1,6 @@
 /**
  * CodeRunner - Service d'exécution de code multi-langages
- * Supporte: JavaScript, Python, Shell/PowerShell
+ * Supporte: JavaScript (Node.js), Python
  */
 
 import { spawn } from 'child_process';
@@ -276,90 +276,6 @@ print('__RESULT__' + json.dumps(__response, ensure_ascii=False))
 }
 
 /**
- * Exécute du code Shell/PowerShell
- */
-async function runShell(code, context, timeout = DEFAULT_TIMEOUT) {
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    const isWindows = process.platform === 'win32';
-    
-    let child;
-    
-    if (isWindows) {
-      // PowerShell sur Windows
-      child = spawn('powershell', ['-NoProfile', '-Command', code], { 
-        timeout, 
-        shell: true 
-      });
-    } else {
-      // Bash sur Linux/Mac
-      const tempFile = join(tempDir, `sh_${randomBytes(8).toString('hex')}.sh`);
-      writeFileSync(tempFile, code);
-      child = spawn('bash', [tempFile], { timeout });
-      
-      child.on('close', () => {
-        try { unlinkSync(tempFile); } catch (e) {}
-      });
-    }
-    
-    let stdout = '';
-    let stderr = '';
-    
-    child.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-    
-    child.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-    
-    child.on('close', (exitCode) => {
-      const executionTime = Date.now() - startTime;
-      
-      if (exitCode === 0 || stdout) {
-        // Try to parse as JSON
-        try {
-          const result = JSON.parse(stdout.trim());
-          resolve({
-            success: true,
-            status: 200,
-            body: result,
-            executionTime
-          });
-        } catch (e) {
-          resolve({
-            success: true,
-            status: 200,
-            body: stdout.trim() || null,
-            executionTime
-          });
-        }
-      } else {
-        resolve({
-          success: false,
-          status: 500,
-          body: { error: stderr.trim() || `Exit code: ${exitCode}` },
-          executionTime
-        });
-      }
-    });
-    
-    child.on('error', (error) => {
-      resolve({
-        success: false,
-        status: 500,
-        body: { error: error.message },
-        executionTime: Date.now() - startTime
-      });
-    });
-    
-    setTimeout(() => {
-      child.kill('SIGTERM');
-    }, timeout);
-  });
-}
-
-/**
  * Exécute du code dans le langage spécifié
  */
 export async function executeCode(language, code, context, timeout = DEFAULT_TIMEOUT) {
@@ -372,17 +288,11 @@ export async function executeCode(language, code, context, timeout = DEFAULT_TIM
     case 'py':
       return runPython(code, context, timeout);
       
-    case 'bash':
-    case 'sh':
-    case 'shell':
-    case 'powershell':
-      return runShell(code, context, timeout);
-      
     default:
       return {
         success: false,
         status: 400,
-        body: { error: `Langage non supporté: ${language}` }
+        body: { error: `Langage non supporté: ${language}. Utilisez JavaScript ou Python.` }
       };
   }
 }

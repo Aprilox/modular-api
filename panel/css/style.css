@@ -1397,6 +1397,11 @@ textarea::placeholder {
   animation: spin 0.8s linear infinite;
 }
 
+.spinner-danger {
+  border-color: rgba(255,255,255,0.3);
+  border-top-color: white;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

@@ -1058,7 +1058,7 @@ async function renderDependencies() {
             : '<span style="color: var(--warning);">⚠️ Non utilisé</span>'}
         </div>
         <div class="dep-card-footer">
-          <button class="btn btn-sm btn-danger" onclick="uninstallDependency('${dep.id}', '${dep.name}')">
+          <button class="btn btn-sm btn-danger" onclick="uninstallDependency('${dep.id}', '${dep.name}', this)">
             <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
             Désinstaller
           </button>
@@ -1149,8 +1149,14 @@ async function installDependency(formData) {
   }
 }
 
-async function uninstallDependency(id, name) {
+async function uninstallDependency(id, name, btn) {
   if (!confirm(`Êtes-vous sûr de vouloir désinstaller ${name} ?`)) return;
+  
+  // Afficher le loading sur le bouton
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner spinner-danger"></span> Suppression...`;
+  }
   
   showToast(`Désinstallation de ${name}...`, 'info');
   
@@ -1160,6 +1166,10 @@ async function uninstallDependency(id, name) {
     loadDependencies();
   } catch (e) {
     showToast(`Erreur: ${e.message}`, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> Désinstaller`;
+    }
   }
 }
 

@@ -4,9 +4,26 @@
  */
 
 import { spawn } from 'child_process';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+// Instance Prisma partagée (sera initialisée via setPrisma)
+let prisma = null;
+
+/**
+ * Configure l'instance Prisma à utiliser
+ * @param {PrismaClient} prismaInstance - Instance Prisma du serveur
+ */
+export function setPrisma(prismaInstance) {
+  prisma = prismaInstance;
+}
+
+/**
+ * Vérifie que Prisma est initialisé
+ */
+function ensurePrisma() {
+  if (!prisma) {
+    throw new Error('DependencyManager: Prisma non initialisé. Appelez setPrisma() d\'abord.');
+  }
+}
 
 /**
  * Détecte les imports/require dans du code JavaScript
@@ -144,115 +161,190 @@ export function detectDependencies(code, language) {
 
 /**
  * Installe un package npm
+ * Timeout de 120 secondes pour éviter les blocages
+ * Compatible Windows, Linux, Mac
  */
 async function installNpmPackage(packageName) {
   return new Promise((resolve, reject) => {
+    const isWindows = process.platform === 'win32';
+    
+    // Sur Windows avec shell:true, pnpm fonctionne directement
     const child = spawn('pnpm', ['add', packageName], {
       cwd: process.cwd(),
-      shell: true
+      shell: isWindows, // shell:true sur Windows, false sur Unix
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
     let stdout = '';
     let stderr = '';
+    let killed = false;
+    
+    // Timeout de 120 secondes (les installations peuvent être lentes)
+    const timeout = setTimeout(() => {
+      killed = true;
+      child.kill('SIGTERM');
+      reject(new Error(`Timeout: l'installation de ${packageName} a pris trop de temps (>120s)`));
+    }, 120000);
     
     child.stdout.on('data', (data) => { stdout += data.toString(); });
     child.stderr.on('data', (data) => { stderr += data.toString(); });
     
     child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (killed) return;
+      
       if (code === 0) {
         resolve({ success: true, output: stdout });
       } else {
-        reject(new Error(stderr || `Exit code: ${code}`));
+        reject(new Error(stderr || stdout || `Exit code: ${code}`));
       }
     });
     
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
   });
 }
 
 /**
  * Désinstalle un package npm
+ * Timeout de 60 secondes
+ * Compatible Windows, Linux, Mac
  */
 async function uninstallNpmPackage(packageName) {
   return new Promise((resolve, reject) => {
+    const isWindows = process.platform === 'win32';
+    
     const child = spawn('pnpm', ['remove', packageName], {
       cwd: process.cwd(),
-      shell: true
+      shell: isWindows,
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
     let stdout = '';
     let stderr = '';
+    let killed = false;
+    
+    // Timeout de 60 secondes
+    const timeout = setTimeout(() => {
+      killed = true;
+      child.kill('SIGTERM');
+      reject(new Error(`Timeout: la désinstallation de ${packageName} a pris trop de temps (>60s)`));
+    }, 60000);
     
     child.stdout.on('data', (data) => { stdout += data.toString(); });
     child.stderr.on('data', (data) => { stderr += data.toString(); });
     
     child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (killed) return;
+      
       if (code === 0) {
         resolve({ success: true, output: stdout });
       } else {
-        reject(new Error(stderr || `Exit code: ${code}`));
+        reject(new Error(stderr || stdout || `Exit code: ${code}`));
       }
     });
     
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
   });
 }
 
 /**
  * Installe un package pip
+ * Timeout de 120 secondes
+ * Compatible Windows, Linux, Mac
  */
 async function installPipPackage(packageName) {
   const pythonPath = process.env.PYTHON_PATH || 'python';
+  const isWindows = process.platform === 'win32';
   
   return new Promise((resolve, reject) => {
     const child = spawn(pythonPath, ['-m', 'pip', 'install', packageName], {
-      shell: true
+      shell: isWindows,
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
     let stdout = '';
     let stderr = '';
+    let killed = false;
+    
+    // Timeout de 120 secondes
+    const timeout = setTimeout(() => {
+      killed = true;
+      child.kill('SIGTERM');
+      reject(new Error(`Timeout: l'installation de ${packageName} a pris trop de temps (>120s)`));
+    }, 120000);
     
     child.stdout.on('data', (data) => { stdout += data.toString(); });
     child.stderr.on('data', (data) => { stderr += data.toString(); });
     
     child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (killed) return;
+      
       if (code === 0) {
         resolve({ success: true, output: stdout });
       } else {
-        reject(new Error(stderr || `Exit code: ${code}`));
+        reject(new Error(stderr || stdout || `Exit code: ${code}`));
       }
     });
     
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
   });
 }
 
 /**
  * Désinstalle un package pip
+ * Timeout de 60 secondes
+ * Compatible Windows, Linux, Mac
  */
 async function uninstallPipPackage(packageName) {
   const pythonPath = process.env.PYTHON_PATH || 'python';
+  const isWindows = process.platform === 'win32';
   
   return new Promise((resolve, reject) => {
     const child = spawn(pythonPath, ['-m', 'pip', 'uninstall', '-y', packageName], {
-      shell: true
+      shell: isWindows,
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
     let stdout = '';
     let stderr = '';
+    let killed = false;
+    
+    // Timeout de 60 secondes
+    const timeout = setTimeout(() => {
+      killed = true;
+      child.kill('SIGTERM');
+      reject(new Error(`Timeout: la désinstallation de ${packageName} a pris trop de temps (>60s)`));
+    }, 60000);
     
     child.stdout.on('data', (data) => { stdout += data.toString(); });
     child.stderr.on('data', (data) => { stderr += data.toString(); });
     
     child.on('close', (code) => {
+      clearTimeout(timeout);
+      if (killed) return;
+      
       if (code === 0) {
         resolve({ success: true, output: stdout });
       } else {
-        reject(new Error(stderr || `Exit code: ${code}`));
+        reject(new Error(stderr || stdout || `Exit code: ${code}`));
       }
     });
     
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearTimeout(timeout);
+      reject(err);
+    });
   });
 }
 
@@ -260,6 +352,8 @@ async function uninstallPipPackage(packageName) {
  * Installe une dépendance
  */
 export async function installDependency(name, language) {
+  ensurePrisma();
+  
   try {
     if (language === 'javascript') {
       await installNpmPackage(name);
@@ -286,6 +380,8 @@ export async function installDependency(name, language) {
  * Désinstalle une dépendance
  */
 export async function uninstallDependency(name, language) {
+  ensurePrisma();
+  
   try {
     if (language === 'javascript') {
       await uninstallNpmPackage(name);
@@ -310,6 +406,8 @@ export async function uninstallDependency(name, language) {
  * Met à jour les dépendances utilisées par une route
  */
 export async function updateRouteDependencies(routeId, code, language) {
+  ensurePrisma();
+  
   const { packages } = detectDependencies(code, language);
   
   // Pour chaque dépendance détectée
@@ -338,6 +436,8 @@ export async function updateRouteDependencies(routeId, code, language) {
  * Retire une route des utilisateurs d'une dépendance
  */
 export async function removeRouteFromDependencies(routeId) {
+  ensurePrisma();
+  
   const dependencies = await prisma.dependency.findMany();
   
   for (const dep of dependencies) {
@@ -358,6 +458,8 @@ export async function removeRouteFromDependencies(routeId) {
  * Liste toutes les dépendances installées
  */
 export async function listDependencies() {
+  ensurePrisma();
+  
   return prisma.dependency.findMany({
     orderBy: { name: 'asc' }
   });
@@ -367,6 +469,8 @@ export async function listDependencies() {
  * Nettoie les dépendances non utilisées
  */
 export async function cleanUnusedDependencies() {
+  ensurePrisma();
+  
   const dependencies = await prisma.dependency.findMany();
   const removed = [];
   
@@ -388,6 +492,7 @@ export async function cleanUnusedDependencies() {
 }
 
 export default {
+  setPrisma,
   detectDependencies,
   installDependency,
   uninstallDependency,

@@ -4,6 +4,7 @@
  */
 
 import { generateApiKey } from '../services/apiKeyManager.js';
+import { invalidateAllRoutes, getCacheStats } from '../services/routeCache.js';
 
 export default async function adminRoutes(fastify, options) {
   const prisma = fastify.prisma;
@@ -60,6 +61,7 @@ export default async function adminRoutes(fastify, options) {
           description: { type: 'string' },
           code: { type: 'string' },
           language: { type: 'string', enum: ['javascript', 'python', 'bash'] },
+          envVars: { type: 'string' }, // JSON des variables d'environnement
           authType: { type: 'string', enum: ['none', 'apikey', 'bearer', 'basic'], default: 'none' },
           rateLimitEnabled: { type: 'boolean', default: false },
           rateLimitRequests: { type: 'integer', default: 100 },
@@ -91,6 +93,9 @@ export default async function adminRoutes(fastify, options) {
     
     const route = await prisma.apiRoute.create({ data });
     
+    // Invalider le cache des routes
+    invalidateAllRoutes();
+    
     return reply.status(201).send({ 
       success: true, 
       message: 'Route créée avec succès',
@@ -116,6 +121,9 @@ export default async function adminRoutes(fastify, options) {
         data
       });
       
+      // Invalider le cache des routes
+      invalidateAllRoutes();
+      
       return { success: true, route };
     } catch (err) {
       if (err.code === 'P2025') {
@@ -133,6 +141,10 @@ export default async function adminRoutes(fastify, options) {
     
     try {
       await prisma.apiRoute.delete({ where: { id } });
+      
+      // Invalider le cache des routes
+      invalidateAllRoutes();
+      
       return { success: true, message: 'Route supprimée' };
     } catch (err) {
       if (err.code === 'P2025') {
@@ -320,7 +332,8 @@ export default async function adminRoutes(fastify, options) {
         apiKeys: keysCount,
         totalRequests: logsCount,
         requests24h,
-        avgResponseTime: Math.round(avgResponseTime._avg?.responseTime || 0)
+        avgResponseTime: Math.round(avgResponseTime._avg?.responseTime || 0),
+        cache: getCacheStats()
       },
       recentLogs
     };
@@ -431,9 +444,11 @@ export default async function adminRoutes(fastify, options) {
 
   /**
    * DELETE /admin/dependencies/:id - Désinstaller une dépendance
+   * ?force=true pour supprimer de la base même si la désinstallation échoue
    */
   fastify.delete('/dependencies/:id', async (request, reply) => {
     const { id } = request.params;
+    const { force } = request.query;
     
     const dep = await prisma.dependency.findUnique({ where: { id } });
     if (!dep) {
@@ -445,8 +460,29 @@ export default async function adminRoutes(fastify, options) {
     
     if (result.success) {
       return { success: true };
+    } else if (force === 'true') {
+      // Forcer la suppression de la base même si la désinstallation échoue
+      await prisma.dependency.delete({ where: { id } });
+      return { success: true, forced: true };
     } else {
       return reply.status(500).send({ error: result.error });
+    }
+  });
+  
+  /**
+   * DELETE /admin/dependencies/:id/db-only - Supprimer de la base sans désinstaller
+   */
+  fastify.delete('/dependencies/:id/db-only', async (request, reply) => {
+    const { id } = request.params;
+    
+    try {
+      await prisma.dependency.delete({ where: { id } });
+      return { success: true };
+    } catch (err) {
+      if (err.code === 'P2025') {
+        return reply.status(404).send({ error: 'Dépendance non trouvée' });
+      }
+      throw err;
     }
   });
 
@@ -538,6 +574,168 @@ export default async function adminRoutes(fastify, options) {
     }
     
     return { success: true };
+  });
+
+  // ============================================
+  // EXPORT / IMPORT CONFIGURATION
+  // ============================================
+
+  /**
+   * GET /admin/export - Exporter toute la configuration
+   * Exporte les routes et clés API en JSON
+   */
+  fastify.get('/export', async (request, reply) => {
+    const [routes, keys, dependencies] = await Promise.all([
+      prisma.apiRoute.findMany(),
+      prisma.apiKey.findMany({
+        select: {
+          name: true,
+          key: true,
+          authMethod: true,
+          customHeader: true,
+          permissions: true,
+          quotaEnabled: true,
+          quotaLimit: true,
+          quotaPeriod: true,
+          enabled: true,
+          expiresAt: true
+        }
+      }),
+      prisma.dependency.findMany()
+    ]);
+
+    // Nettoyer les données pour l'export
+    const cleanRoutes = routes.map(({ id, createdAt, updatedAt, ...route }) => route);
+    const cleanDeps = dependencies.map(({ id, installedAt, updatedAt, usedBy, ...dep }) => dep);
+
+    const exportData = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      routes: cleanRoutes,
+      apiKeys: keys,
+      dependencies: cleanDeps
+    };
+
+    reply.header('Content-Type', 'application/json');
+    reply.header('Content-Disposition', `attachment; filename="modular-api-export-${Date.now()}.json"`);
+    
+    return exportData;
+  });
+
+  /**
+   * POST /admin/import - Importer une configuration
+   * Importe les routes et clés API depuis un JSON
+   */
+  fastify.post('/import', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['routes'],
+        properties: {
+          routes: { type: 'array' },
+          apiKeys: { type: 'array' },
+          dependencies: { type: 'array' },
+          mode: { 
+            type: 'string', 
+            enum: ['merge', 'replace'],
+            default: 'merge'
+          }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { routes = [], apiKeys = [], dependencies = [], mode = 'merge' } = request.body;
+    
+    const results = {
+      routes: { created: 0, updated: 0, skipped: 0 },
+      apiKeys: { created: 0, skipped: 0 },
+      dependencies: { created: 0, skipped: 0 }
+    };
+
+    // Mode replace : supprimer tout d'abord
+    if (mode === 'replace') {
+      await prisma.apiRoute.deleteMany();
+      await prisma.apiKey.deleteMany();
+      // Invalider le cache
+      invalidateAllRoutes();
+    }
+
+    // Importer les routes
+    for (const route of routes) {
+      try {
+        const existing = await prisma.apiRoute.findFirst({
+          where: { path: route.path, method: route.method }
+        });
+
+        if (existing) {
+          if (mode === 'merge') {
+            await prisma.apiRoute.update({
+              where: { id: existing.id },
+              data: route
+            });
+            results.routes.updated++;
+          } else {
+            results.routes.skipped++;
+          }
+        } else {
+          await prisma.apiRoute.create({ data: route });
+          results.routes.created++;
+        }
+      } catch (err) {
+        results.routes.skipped++;
+      }
+    }
+
+    // Importer les clés API
+    for (const key of apiKeys) {
+      try {
+        const existing = await prisma.apiKey.findUnique({
+          where: { key: key.key }
+        });
+
+        if (!existing) {
+          await prisma.apiKey.create({ data: key });
+          results.apiKeys.created++;
+        } else {
+          results.apiKeys.skipped++;
+        }
+      } catch (err) {
+        results.apiKeys.skipped++;
+      }
+    }
+
+    // Enregistrer les dépendances (sans les installer)
+    for (const dep of dependencies) {
+      try {
+        const existing = await prisma.dependency.findFirst({
+          where: { name: dep.name, language: dep.language }
+        });
+
+        if (!existing) {
+          await prisma.dependency.create({ 
+            data: { 
+              name: dep.name, 
+              language: dep.language,
+              version: dep.version || 'unknown'
+            } 
+          });
+          results.dependencies.created++;
+        } else {
+          results.dependencies.skipped++;
+        }
+      } catch (err) {
+        results.dependencies.skipped++;
+      }
+    }
+
+    // Invalider le cache des routes
+    invalidateAllRoutes();
+
+    return { 
+      success: true, 
+      message: 'Import terminé',
+      results 
+    };
   });
 }
 

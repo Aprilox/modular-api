@@ -538,6 +538,11 @@ textarea::placeholder {
   color: var(--info);
 }
 
+.stat-icon.cache {
+  background: #fef3c7;
+  color: #d97706;
+}
+
 .stat-info {
   display: flex;
   flex-direction: column;
@@ -1702,5 +1707,174 @@ textarea::placeholder {
     margin: 1rem;
     max-height: calc(100vh - 2rem);
   }
+}
+
+/* ============================================
+   ENV VARS CONFIG
+   ============================================ */
+
+.envvars-config {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-sm);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.envvars-config .code-editor {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+
+/* ============================================
+   SETTINGS BUTTONS
+   ============================================ */
+
+.settings-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.settings-buttons .btn {
+  flex: 1;
+}
+
+/* ============================================
+   IMPORT MODAL
+   ============================================ */
+
+.import-info {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.import-icon {
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+}
+
+.import-info p {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 1.1rem;
+}
+
+.import-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: var(--gray-50);
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 1.5rem;
+}
+
+.import-stat {
+  text-align: center;
+}
+
+.import-stat-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.import-stat-label {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+}
+
+.import-description {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.import-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.import-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ============================================
+   INSTALL LOG PANEL
+   ============================================ */
+
+.install-log-panel {
+  background: var(--gray-900);
+  border-radius: var(--border-radius);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.install-log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  background: var(--gray-800);
+  border-bottom: 1px solid var(--gray-700);
+}
+
+.install-log-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--white);
+  font-weight: 500;
+}
+
+.install-log-title .spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+.install-log-title.done .spinner {
+  display: none;
+}
+
+.install-log-title.done::before {
+  content: '✓';
+  color: var(--success);
+  font-size: 1.25rem;
+}
+
+.install-log-content {
+  padding: 1rem 1.25rem;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.install-log-line {
+  color: var(--gray-400);
+  padding: 0.25rem 0;
+}
+
+.install-log-line.success {
+  color: var(--success);
+}
+
+.install-log-line.error {
+  color: var(--danger);
+}
+
+.install-log-line.info {
+  color: var(--info);
+}
+
+.install-log-line .pkg-name {
+  color: var(--primary-light);
+  font-weight: 500;
 }
 

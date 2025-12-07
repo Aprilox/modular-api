@@ -31,6 +31,10 @@ model ApiRoute {
   code        String   // Code source
   language    String   // javascript, python, bash
   
+  // Variables d'environnement personnalisées (JSON)
+  // Format: {"KEY": "value", "API_SECRET": "xxx"}
+  envVars     String?  // Variables d'env pour cette route (JSON)
+  
   // Authentification
   authType    String   @default("none") // none, apikey, bearer, basic
   

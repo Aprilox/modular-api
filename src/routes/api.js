@@ -6,6 +6,7 @@
 import { executeCode } from '../services/codeRunner.js';
 import { apiAuth } from '../middleware/auth.js';
 import { checkRateLimit } from '../services/rateLimiter.js';
+import { getCachedRoute, setCachedRoute } from '../services/routeCache.js';
 
 export default async function apiRoutes(fastify, options) {
   const prisma = fastify.prisma;
@@ -102,8 +103,18 @@ export default async function apiRoutes(fastify, options) {
       headers: request.headers || {}
     };
     
-    // Exécuter le code
-    const result = await executeCode(route.language, route.code, context);
+    // Parser les variables d'environnement personnalisées
+    let customEnv = {};
+    if (route.envVars) {
+      try {
+        customEnv = JSON.parse(route.envVars);
+      } catch (e) {
+        // Ignorer les erreurs de parsing
+      }
+    }
+    
+    // Exécuter le code avec les variables d'environnement personnalisées
+    const result = await executeCode(route.language, route.code, context, undefined, customEnv);
     
     const responseTime = Date.now() - startTime;
     
@@ -138,14 +149,24 @@ export default async function apiRoutes(fastify, options) {
 /**
  * Trouve une route correspondant au path et à la méthode
  * Supporte les paramètres dynamiques (ex: /users/:id)
+ * Utilise le cache pour améliorer les performances
  */
 async function findMatchingRoute(prisma, path, method) {
+  // Vérifier le cache d'abord
+  const cached = getCachedRoute(path, method);
+  if (cached) {
+    return cached;
+  }
+  
   // D'abord chercher une correspondance exacte
   let route = await prisma.apiRoute.findFirst({
     where: { path, method }
   });
   
-  if (route) return route;
+  if (route) {
+    setCachedRoute(path, method, route);
+    return route;
+  }
   
   // Sinon chercher les routes avec paramètres
   const routes = await prisma.apiRoute.findMany({
@@ -154,10 +175,13 @@ async function findMatchingRoute(prisma, path, method) {
   
   for (const r of routes) {
     if (matchPath(r.path, path)) {
+      setCachedRoute(path, method, r);
       return r;
     }
   }
   
+  // Mettre en cache le résultat null aussi pour éviter les requêtes répétées
+  setCachedRoute(path, method, null);
   return null;
 }
 

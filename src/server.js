@@ -18,6 +18,9 @@ import adminRoutes from './routes/admin.js';
 import authRoutes from './routes/auth.js';
 import apiRoutes from './routes/api.js';
 
+// Services
+import { setPrisma as setDependencyManagerPrisma } from './services/dependencyManager.js';
+
 // Load environment variables
 dotenv.config();
 
@@ -27,6 +30,9 @@ const rootDir = join(__dirname, '..');
 
 // Initialize Prisma
 const prisma = new PrismaClient();
+
+// Partager l'instance Prisma avec les services
+setDependencyManagerPrisma(prisma);
 
 // Initialize Fastify
 const fastify = Fastify({
@@ -94,6 +100,70 @@ async function start() {
     reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
     reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     reply.header('Pragma', 'no-cache');
+  });
+
+  // Handler d'erreurs global
+  fastify.setErrorHandler(async (error, request, reply) => {
+    // Log l'erreur
+    fastify.log.error({
+      err: error,
+      url: request.url,
+      method: request.method,
+      ip: request.ip
+    });
+
+    // Ne pas exposer les détails d'erreur en production
+    const isDev = process.env.NODE_ENV !== 'production';
+    
+    // Erreurs de validation Fastify
+    if (error.validation) {
+      return reply.status(400).send({
+        error: 'Validation Error',
+        message: 'Données invalides',
+        details: isDev ? error.validation : undefined
+      });
+    }
+
+    // Erreurs Prisma
+    if (error.code?.startsWith('P')) {
+      const prismaErrors = {
+        'P2002': { status: 409, message: 'Cette ressource existe déjà' },
+        'P2025': { status: 404, message: 'Ressource non trouvée' },
+        'P2003': { status: 400, message: 'Référence invalide' }
+      };
+      
+      const mapped = prismaErrors[error.code] || { status: 500, message: 'Erreur base de données' };
+      return reply.status(mapped.status).send({
+        error: 'Database Error',
+        message: mapped.message,
+        code: isDev ? error.code : undefined
+      });
+    }
+
+    // Erreur JWT
+    if (error.code === 'FST_JWT_NO_AUTHORIZATION_IN_HEADER' || 
+        error.code === 'FST_JWT_AUTHORIZATION_TOKEN_INVALID') {
+      return reply.status(401).send({
+        error: 'Unauthorized',
+        message: 'Token invalide ou manquant'
+      });
+    }
+
+    // Erreur générique
+    const statusCode = error.statusCode || 500;
+    return reply.status(statusCode).send({
+      error: statusCode >= 500 ? 'Internal Server Error' : 'Error',
+      message: isDev ? error.message : 'Une erreur est survenue',
+      stack: isDev ? error.stack : undefined
+    });
+  });
+
+  // Handler pour les routes non trouvées
+  fastify.setNotFoundHandler(async (request, reply) => {
+    return reply.status(404).send({
+      error: 'Not Found',
+      message: `Route ${request.method} ${request.url} non trouvée`
+    });
   });
 
   // Fichiers statiques (panel admin)

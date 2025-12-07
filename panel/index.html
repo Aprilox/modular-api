@@ -37,6 +37,8 @@
         <div class="setup-info">
           <p>👋 Bienvenue ! Créez votre mot de passe administrateur pour commencer.</p>
         </div>
+        <!-- Champ username caché pour l'accessibilité -->
+        <input type="text" name="username" value="admin" autocomplete="username" style="display:none" aria-hidden="true">
         <div class="form-group">
           <label for="setup-password">Mot de passe</label>
           <input type="password" id="setup-password" name="password" placeholder="Minimum 8 caractères" minlength="8" required autofocus autocomplete="new-password">
@@ -76,6 +78,8 @@
         <p>Panel d'administration</p>
       </div>
       <form id="login-form" class="login-form" method="POST" autocomplete="off">
+        <!-- Champ username caché pour l'accessibilité -->
+        <input type="text" name="username" value="admin" autocomplete="username" style="display:none" aria-hidden="true">
         <div class="form-group">
           <label for="password">Mot de passe</label>
           <input type="password" id="password" name="password" placeholder="Entrez votre mot de passe" required autofocus autocomplete="current-password">
@@ -191,6 +195,15 @@
               <span class="stat-label">Temps moyen</span>
             </div>
           </div>
+          <div class="stat-card">
+            <div class="stat-icon cache">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/><path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/><path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-cache">0<small>%</small></span>
+              <span class="stat-label">Cache hit rate</span>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -255,6 +268,10 @@
         <div class="section-header">
           <h2>Dépendances</h2>
           <div class="header-actions">
+            <button class="btn btn-secondary" id="btn-install-all-missing" style="display: none;">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+              <span>Installer les manquantes</span>
+            </button>
             <button class="btn btn-secondary" id="btn-clean-deps">
               <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
               <span>Nettoyer inutilisées</span>
@@ -263,6 +280,20 @@
               <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
               <span>Installer</span>
             </button>
+          </div>
+        </div>
+        
+        <!-- Installation Log Panel -->
+        <div id="install-log-panel" class="install-log-panel hidden">
+          <div class="install-log-header">
+            <div class="install-log-title">
+              <span class="spinner"></span>
+              <span id="install-log-status">Installation en cours...</span>
+            </div>
+            <button class="btn btn-sm btn-secondary" id="btn-close-install-log">Fermer</button>
+          </div>
+          <div class="install-log-content" id="install-log-content">
+            <!-- Les logs apparaissent ici -->
           </div>
         </div>
         
@@ -374,6 +405,21 @@
                 <option value="apikey">Clé API</option>
               </select>
             </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="route-envvars-toggle">
+            <span>Variables d'environnement personnalisées</span>
+          </label>
+        </div>
+        
+        <div id="envvars-config" class="envvars-config hidden">
+          <div class="form-group">
+            <label for="route-envvars">Variables (format JSON)</label>
+            <textarea id="route-envvars" name="envVars" class="code-editor" placeholder='{"API_KEY": "xxx", "SECRET": "yyy"}' rows="4"></textarea>
+            <div class="form-hint">Ces variables seront accessibles via process.env (JS) ou os.environ (Python)</div>
           </div>
         </div>
         
@@ -521,6 +567,8 @@
         <div class="settings-section">
           <h4>Changer le mot de passe</h4>
           <form id="password-form" method="POST" autocomplete="off">
+            <!-- Champ username caché pour l'accessibilité -->
+            <input type="text" name="username" value="admin" autocomplete="username" style="display:none" aria-hidden="true">
             <div class="form-group">
               <label for="current-password">Mot de passe actuel</label>
               <input type="password" id="current-password" name="currentPassword" required autocomplete="current-password">
@@ -535,6 +583,22 @@
             </div>
             <button type="submit" class="btn btn-primary">Changer le mot de passe</button>
           </form>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Sauvegarde et restauration</h4>
+          <p>Exportez ou importez votre configuration (routes, clés API, dépendances).</p>
+          <div class="settings-buttons">
+            <button id="btn-export-config" class="btn btn-secondary">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+              Exporter
+            </button>
+            <button id="btn-import-config" class="btn btn-secondary">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+              Importer
+            </button>
+            <input type="file" id="import-file-input" accept=".json" style="display: none;">
+          </div>
         </div>
         
         <div class="settings-section settings-danger">
@@ -651,6 +715,51 @@
           <h4>Body de la requête</h4>
           <pre class="log-detail-json" id="log-detail-body">-</pre>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Modal -->
+  <div id="import-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Importer une configuration</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="import-info">
+          <div class="import-icon">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="48" height="48"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+          </div>
+          <p id="import-file-name">fichier.json</p>
+        </div>
+        <div class="import-stats" id="import-stats">
+          <div class="import-stat">
+            <span class="import-stat-value" id="import-routes-count">0</span>
+            <span class="import-stat-label">Routes</span>
+          </div>
+          <div class="import-stat">
+            <span class="import-stat-value" id="import-keys-count">0</span>
+            <span class="import-stat-label">Clés API</span>
+          </div>
+          <div class="import-stat">
+            <span class="import-stat-value" id="import-deps-count">0</span>
+            <span class="import-stat-label">Dépendances</span>
+          </div>
+        </div>
+        <p class="import-description">Comment souhaitez-vous importer cette configuration ?</p>
+      </div>
+      <div class="modal-footer import-actions">
+        <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-import-merge">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"/></svg>
+          Fusionner
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-import-replace">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+          Écraser tout
+        </button>
       </div>
     </div>
   </div>

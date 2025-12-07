@@ -30,6 +30,11 @@
 | 📊 **Logs détaillés** | Historique des requêtes avec erreurs |
 | 🗄️ **Multi-database** | SQLite, PostgreSQL, MySQL, MariaDB |
 | 🎨 **IDE intégré** | Éditeur de code avec coloration syntaxique |
+| 🚀 **Cache intelligent** | Cache des routes avec statistiques en temps réel |
+| 🛡️ **Anti-bruteforce** | Protection contre les attaques par force brute |
+| 🌐 **Variables d'env** | Variables d'environnement personnalisées par route |
+| 💾 **Export/Import** | Sauvegarde et restauration de la configuration |
+| ⚠️ **Gestion d'erreurs** | Gestionnaire d'erreurs global robuste |
 
 ---
 
@@ -95,6 +100,7 @@ curl http://localhost:3000/api/hello?name=Dev
 ```javascript
 // Variables disponibles: request, params, query, body, headers
 // Fonctions: json(data, status), respond(data, status, headers)
+// process.env contient les variables d'environnement de la route
 
 const axios = require('axios');
 
@@ -105,11 +111,30 @@ json({
 });
 ```
 
+### JavaScript avec variables d'environnement
+
+```javascript
+// Utilise les variables définies dans le panel
+const axios = require('axios');
+
+const response = await axios.post('https://api.openai.com/v1/chat/completions', {
+  model: 'gpt-3.5-turbo',
+  messages: [{ role: 'user', content: query.prompt || 'Hello!' }]
+}, {
+  headers: {
+    'Authorization': `Bearer ${process.env.OPENAI_KEY}`
+  }
+});
+
+json(response.data);
+```
+
 ### Python
 
 ```python
 # Variables disponibles: request, params, query, body, headers
 # Fonctions: json_response(data, status), respond(data, status, headers)
+# os.environ contient les variables d'environnement de la route
 
 import random
 from datetime import datetime
@@ -122,6 +147,61 @@ json_response({
 
 ---
 
+## 🔐 Types d'authentification
+
+| Type | Description | Usage |
+|------|-------------|-------|
+| **Public** | Aucune authentification requise | APIs ouvertes |
+| **API Key** | Clé dans header `X-API-Key` | Applications tierces |
+| **Bearer Token** | Token JWT dans `Authorization: Bearer <token>` | Auth utilisateur |
+| **Header personnalisé** | Header custom + valeur | Intégrations spécifiques |
+
+---
+
+## 🛡️ Sécurité
+
+| Protection | Description |
+|------------|-------------|
+| ✅ **Mot de passe hashé** | bcrypt avec salt |
+| ✅ **JWT sécurisé** | Expiration 24h, secret aléatoire |
+| ✅ **Anti-bruteforce** | 5 tentatives / 15 min sur le login |
+| ✅ **Code sandboxé** | Exécution isolée avec timeout |
+| ✅ **Rate limiting** | Configurable par route (IP ou API Key) |
+| ✅ **Headers sécurité** | X-Content-Type-Options, X-Frame-Options, etc. |
+| ✅ **CORS configurable** | Origines autorisées personnalisables |
+
+---
+
+## 🚀 Cache des routes
+
+Le cache améliore les performances en stockant les configurations de routes en mémoire.
+
+- **TTL** : 1 minute par défaut
+- **Invalidation** : Automatique lors des modifications
+- **Stats** : Visible dans le dashboard (hit rate, taille cache)
+
+---
+
+## 💾 Export / Import
+
+### Export
+
+Depuis **Paramètres > Export**, téléchargez un fichier JSON contenant :
+- Toutes les routes (code, auth, rate limit, envVars)
+- Toutes les clés API (permissions, quotas)
+- Liste des dépendances installées
+
+### Import
+
+Depuis **Paramètres > Import** :
+- **Fusionner** : Ajoute/met à jour sans supprimer l'existant
+- **Écraser** : Remplace toute la configuration
+- **Annuler** : Ferme sans importer
+
+> 💡 Après un import, utilisez "Installer les dépendances manquantes" pour installer les packages requis.
+
+---
+
 ## ⚙️ Configuration
 
 ### Variables d'environnement
@@ -130,9 +210,24 @@ json_response({
 |----------|-------------|--------|
 | `DATABASE_URL` | URL de connexion BDD | `file:./data.db` |
 | `PORT` | Port du serveur | `3000` |
+| `HOST` | Adresse d'écoute | `0.0.0.0` |
 | `CODE_TIMEOUT` | Timeout d'exécution (ms) | `5000` |
 | `ENABLE_JAVASCRIPT` | Activer JavaScript | `true` |
 | `ENABLE_PYTHON` | Activer Python | `true` |
+| `JWT_SECRET` | Secret JWT (auto-généré si absent) | - |
+
+### Variables par route
+
+Dans le panel, cochez "Variables d'environnement personnalisées" et entrez du JSON :
+
+```json
+{
+  "OPENAI_KEY": "sk-xxx...",
+  "API_SECRET": "my-secret-value"
+}
+```
+
+Ces variables sont accessibles via `process.env` (JS) ou `os.environ` (Python).
 
 ### Bases de données
 
@@ -154,35 +249,27 @@ DATABASE_URL="mysql://user:password@localhost:3306/modular_api"
 ```
 modular-api/
 ├── src/
-│   ├── server.js           # Serveur Fastify principal
+│   ├── server.js              # Serveur Fastify principal
 │   ├── routes/
-│   │   ├── api.js          # Routes API dynamiques
-│   │   ├── admin.js        # API d'administration
-│   │   └── auth.js         # Authentification
+│   │   ├── api.js             # Routes API dynamiques
+│   │   ├── admin.js           # API d'administration
+│   │   └── auth.js            # Authentification (+ anti-bruteforce)
 │   ├── services/
-│   │   ├── codeRunner.js   # Exécution de code
-│   │   └── dependencyManager.js
+│   │   ├── codeRunner.js      # Exécution de code sandboxée
+│   │   ├── dependencyManager.js # Gestion des packages npm/pip
+│   │   ├── apiKeyManager.js   # Gestion des clés API
+│   │   ├── rateLimiter.js     # Rate limiting
+│   │   └── routeCache.js      # Cache des routes
 │   └── middleware/
-│       └── auth.js         # Middleware d'authentification
-├── panel/                  # Interface web admin
+│       └── auth.js            # Middleware d'authentification
+├── panel/                     # Interface web admin
 │   ├── index.html
 │   ├── css/style.css
 │   └── js/app.js
 ├── prisma/
-│   └── schema.prisma       # Schéma de base de données
+│   └── schema.prisma          # Schéma de base de données
 └── env.example
 ```
-
----
-
-## 🔒 Sécurité
-
-- ✅ Mot de passe admin hashé (bcrypt)
-- ✅ JWT avec expiration 24h
-- ✅ Exécution de code sandboxée avec timeout
-- ✅ Rate limiting configurable
-- ✅ Headers de sécurité HTTP
-- ✅ Protection CSRF sur les formulaires
 
 ---
 
@@ -194,6 +281,36 @@ modular-api/
 | `pnpm run dev` | Mode développement (hot reload) |
 | `pnpm run db:push` | Synchroniser le schéma BDD |
 | `pnpm run db:studio` | Interface Prisma Studio |
+
+---
+
+## 📊 Dashboard
+
+Le panel admin affiche :
+- **Nombre de routes** actives
+- **Nombre de clés API** créées  
+- **Requêtes totales** traitées
+- **Cache hit rate** (pourcentage de requêtes servies depuis le cache)
+
+---
+
+## 🔧 Dépendances
+
+### Installation automatique
+
+1. Allez dans l'onglet **Dépendances**
+2. Cliquez sur **"Installer les dépendances manquantes"**
+3. Suivez les logs en temps réel
+
+### Installation manuelle
+
+```bash
+# JavaScript (npm/pnpm)
+pnpm add axios lodash moment
+
+# Python (pip)
+pip install requests pandas numpy
+```
 
 ---
 

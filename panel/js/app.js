@@ -33,9 +33,13 @@ let ideEditor = null;
 
 async function api(endpoint, options = {}) {
   const headers = {
-    'Content-Type': 'application/json',
     ...options.headers
   };
+  
+  // Ajouter Content-Type seulement si on a un body
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
   
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -370,6 +374,14 @@ async function loadDashboardData() {
     document.getElementById('stat-requests').textContent = data.stats.requests24h;
     document.getElementById('stat-response').innerHTML = `${data.stats.avgResponseTime}<small>ms</small>`;
     
+    // Stats du cache
+    if (data.stats.cache && data.stats.cache.hitRate) {
+      const hitRate = data.stats.cache.hitRate.replace('%', '');
+      document.getElementById('stat-cache').innerHTML = `${hitRate}<small>%</small>`;
+    } else {
+      document.getElementById('stat-cache').innerHTML = `0<small>%</small>`;
+    }
+    
     renderRecentLogs(data.recentLogs.slice(0, 10));
   } catch (e) {
     showToast('Erreur lors du chargement des statistiques', 'error');
@@ -540,6 +552,12 @@ function openRouteModal(route = null) {
     document.getElementById('route-ratelimit-by').value = route.rateLimitBy;
     document.getElementById('route-enabled').checked = route.enabled;
     
+    // Variables d'environnement
+    const hasEnvVars = route.envVars && route.envVars !== '{}';
+    document.getElementById('route-envvars-toggle').checked = hasEnvVars;
+    document.getElementById('route-envvars').value = route.envVars || '';
+    document.getElementById('envvars-config').classList.toggle('hidden', !hasEnvVars);
+    
     document.getElementById('ratelimit-config').classList.toggle('hidden', !route.rateLimitEnabled);
     updateCodeHelp(route.language);
   } else {
@@ -547,6 +565,9 @@ function openRouteModal(route = null) {
     document.getElementById('route-id').value = '';
     document.getElementById('route-language').value = 'javascript';
     document.getElementById('route-code').value = `json({ message: "Hello World!" });`;
+    document.getElementById('route-envvars-toggle').checked = false;
+    document.getElementById('route-envvars').value = '';
+    document.getElementById('envvars-config').classList.add('hidden');
     updateCodeHelp('javascript');
   }
   
@@ -560,6 +581,23 @@ function editRoute(id) {
 
 async function saveRoute(formData) {
   const id = formData.get('id');
+  
+  // Récupérer et valider les envVars
+  let envVars = null;
+  const envVarsToggle = document.getElementById('route-envvars-toggle').checked;
+  if (envVarsToggle) {
+    const envVarsRaw = document.getElementById('route-envvars').value.trim();
+    if (envVarsRaw) {
+      try {
+        JSON.parse(envVarsRaw); // Valider le JSON
+        envVars = envVarsRaw;
+      } catch (e) {
+        showToast('Variables d\'environnement: JSON invalide', 'error');
+        return;
+      }
+    }
+  }
+  
   const data = {
     name: formData.get('name'),
     method: formData.get('method'),
@@ -568,6 +606,7 @@ async function saveRoute(formData) {
     language: formData.get('language'),
     authType: formData.get('authType'),
     code: formData.get('code'),
+    envVars: envVars,
     rateLimitEnabled: formData.get('rateLimitEnabled') === 'on',
     rateLimitRequests: parseInt(formData.get('rateLimitRequests')) || 100,
     rateLimitWindow: parseInt(formData.get('rateLimitWindow')) || 60,
@@ -1057,10 +1096,120 @@ async function checkMissingDependencies() {
     missingDepsCount = allMissing.length;
     updateDepsBadge();
     
+    // Afficher/cacher le bouton "Installer les manquantes"
+    const btnInstallAll = document.getElementById('btn-install-all-missing');
+    if (btnInstallAll) {
+      btnInstallAll.style.display = allMissing.length > 0 ? 'inline-flex' : 'none';
+    }
+    
     return allMissing;
   } catch (e) {
     console.error('Erreur vérification dépendances:', e);
     return [];
+  }
+}
+
+// Fonction pour ajouter une ligne au log d'installation
+function addInstallLog(message, type = '') {
+  const logContent = document.getElementById('install-log-content');
+  if (!logContent) return;
+  
+  const line = document.createElement('div');
+  line.className = `install-log-line ${type}`;
+  line.innerHTML = message;
+  logContent.appendChild(line);
+  
+  // Scroll vers le bas
+  logContent.scrollTop = logContent.scrollHeight;
+}
+
+// Installer toutes les dépendances manquantes
+async function installAllMissingDeps() {
+  // Afficher le panel de log immédiatement
+  const logPanel = document.getElementById('install-log-panel');
+  const logContent = document.getElementById('install-log-content');
+  const logStatus = document.getElementById('install-log-status');
+  const logTitle = document.querySelector('.install-log-title');
+  
+  logPanel.classList.remove('hidden');
+  logContent.innerHTML = '';
+  logTitle.classList.remove('done');
+  logStatus.textContent = 'Analyse des dépendances manquantes...';
+  
+  addInstallLog('🔍 Scan des routes pour détecter les dépendances...', 'info');
+  
+  // Récupérer toutes les routes
+  let routesData;
+  try {
+    routesData = await api('/admin/routes');
+  } catch (e) {
+    addInstallLog('✗ Erreur lors de la récupération des routes', 'error');
+    logTitle.classList.add('done');
+    logStatus.textContent = 'Erreur';
+    return;
+  }
+  
+  // Détecter toutes les dépendances manquantes
+  let allMissing = [];
+  
+  for (const route of routesData.routes) {
+    if (route.language === 'javascript' || route.language === 'python') {
+      try {
+        const result = await api('/admin/dependencies/detect', {
+          method: 'POST',
+          body: JSON.stringify({ code: route.code, language: route.language })
+        });
+        
+        const missing = result.packages.filter(p => !p.installed);
+        missing.forEach(m => {
+          if (!allMissing.find(x => x.name === m.name && x.language === route.language)) {
+            allMissing.push({ name: m.name, language: route.language, route: route.name });
+          }
+        });
+      } catch (e) {
+        addInstallLog(`⚠ Erreur analyse route "${route.name}"`, 'error');
+      }
+    }
+  }
+  
+  if (allMissing.length === 0) {
+    addInstallLog('✓ Aucune dépendance manquante !', 'success');
+    logTitle.classList.add('done');
+    logStatus.textContent = 'Aucune dépendance manquante';
+    return;
+  }
+  
+  addInstallLog(`📦 ${allMissing.length} dépendance(s) à installer`, 'info');
+  logStatus.textContent = `Installation de ${allMissing.length} dépendance(s)...`;
+  
+  let installed = 0;
+  let errors = 0;
+  
+  for (const dep of allMissing) {
+    addInstallLog(`⏳ Installation de <span class="pkg-name">${dep.name}</span> (${dep.language})...`, 'info');
+    
+    try {
+      await api('/admin/dependencies', {
+        method: 'POST',
+        body: JSON.stringify({ name: dep.name, language: dep.language })
+      });
+      
+      addInstallLog(`✓ <span class="pkg-name">${dep.name}</span> installé avec succès`, 'success');
+      installed++;
+    } catch (err) {
+      addInstallLog(`✗ <span class="pkg-name">${dep.name}</span> - ${err.message}`, 'error');
+      errors++;
+    }
+  }
+  
+  logTitle.classList.add('done');
+  logStatus.textContent = `Terminé: ${installed} installé(s), ${errors} erreur(s)`;
+  
+  // Recharger les dépendances
+  await loadDependencies();
+  
+  if (installed > 0) {
+    showToast(`${installed} dépendance(s) installée(s) avec succès`, 'success');
   }
 }
 
@@ -1279,7 +1428,17 @@ async function uninstallDependency(id, name, btn) {
     showToast(`${name} désinstallé`, 'success');
     loadDependencies();
   } catch (e) {
-    showToast(`Erreur: ${e.message}`, 'error');
+    // Proposer de forcer la suppression
+    if (confirm(`Erreur lors de la désinstallation: ${e.message}\n\nVoulez-vous forcer la suppression de la base de données ?\n(Le package restera peut-être installé sur le système)`)) {
+      try {
+        await api(`/admin/dependencies/${id}/db-only`, { method: 'DELETE' });
+        showToast(`${name} supprimé de la base`, 'success');
+        loadDependencies();
+      } catch (e2) {
+        showToast(`Erreur: ${e2.message}`, 'error');
+      }
+    }
+    
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> Désinstaller`;
@@ -1394,6 +1553,164 @@ document.addEventListener('DOMContentLoaded', () => {
     changePassword(currentPassword, newPassword);
   });
   
+  // Export configuration
+  document.getElementById('btn-export-config').addEventListener('click', async () => {
+    try {
+      showToast('Export en cours...', 'info');
+      const data = await api('/admin/export');
+      
+      // Télécharger le fichier
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `modular-api-export-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showToast('Configuration exportée avec succès', 'success');
+    } catch (e) {
+      showToast('Erreur lors de l\'export: ' + e.message, 'error');
+    }
+  });
+  
+  // Import configuration
+  document.getElementById('btn-import-config').addEventListener('click', () => {
+    document.getElementById('import-file-input').click();
+  });
+  
+  // Variable pour stocker les données d'import en attente
+  let pendingImportData = null;
+  
+  document.getElementById('import-file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      
+      // Stocker les données pour l'import
+      pendingImportData = data;
+      
+      // Fermer le modal des paramètres
+      document.getElementById('settings-modal').classList.add('hidden');
+      
+      // Afficher les infos dans la modal
+      document.getElementById('import-file-name').textContent = file.name;
+      document.getElementById('import-routes-count').textContent = data.routes?.length || 0;
+      document.getElementById('import-keys-count').textContent = data.apiKeys?.length || 0;
+      document.getElementById('import-deps-count').textContent = data.dependencies?.length || 0;
+      
+      // Ouvrir la modal d'import
+      document.getElementById('import-modal').classList.remove('hidden');
+      
+    } catch (err) {
+      showToast('Erreur: fichier JSON invalide', 'error');
+    }
+    
+    // Réinitialiser l'input
+    e.target.value = '';
+  });
+  
+  // Bouton Fusionner
+  document.getElementById('btn-import-merge').addEventListener('click', async () => {
+    if (!pendingImportData) return;
+    await executeImport('merge');
+  });
+  
+  // Bouton Écraser
+  document.getElementById('btn-import-replace').addEventListener('click', async () => {
+    if (!pendingImportData) return;
+    
+    // Confirmation supplémentaire pour l'écrasement
+    if (!confirm('⚠️ ATTENTION: Ceci va supprimer toutes vos routes et clés API existantes. Continuer ?')) {
+      return;
+    }
+    
+    await executeImport('replace');
+  });
+  
+  async function executeImport(mode) {
+    document.getElementById('import-modal').classList.add('hidden');
+    showToast('Import en cours...', 'info');
+    
+    try {
+      const result = await api('/admin/import', {
+        method: 'POST',
+        body: JSON.stringify({ ...pendingImportData, mode })
+      });
+      
+      showToast(`Import terminé: ${result.results.routes.created} routes créées, ${result.results.apiKeys.created} clés créées`, 'success');
+      
+      // Recharger les données
+      loadDashboardData();
+      loadRoutes();
+      loadKeys();
+      
+      // Si des dépendances ont été importées, proposer de les installer
+      if (pendingImportData.dependencies && pendingImportData.dependencies.length > 0) {
+        // Aller à la section dépendances et lancer l'installation
+        switchSection('dependencies');
+        await installImportedDependencies(pendingImportData.dependencies);
+      }
+      
+    } catch (err) {
+      showToast('Erreur lors de l\'import: ' + err.message, 'error');
+    }
+    
+    pendingImportData = null;
+  }
+  
+  // Installation des dépendances importées avec log visuel
+  async function installImportedDependencies(deps) {
+    const logPanel = document.getElementById('install-log-panel');
+    const logContent = document.getElementById('install-log-content');
+    const logStatus = document.getElementById('install-log-status');
+    const logTitle = document.querySelector('.install-log-title');
+    
+    // Afficher le panel
+    logPanel.classList.remove('hidden');
+    logContent.innerHTML = '';
+    logTitle.classList.remove('done');
+    logStatus.textContent = `Installation de ${deps.length} dépendance(s)...`;
+    
+    let installed = 0;
+    let errors = 0;
+    
+    for (const dep of deps) {
+      // Ajouter une ligne de log
+      addInstallLog(`Installation de <span class="pkg-name">${dep.name}</span> (${dep.language})...`, 'info');
+      
+      try {
+        await api('/admin/dependencies', {
+          method: 'POST',
+          body: JSON.stringify({ name: dep.name, language: dep.language })
+        });
+        
+        addInstallLog(`✓ <span class="pkg-name">${dep.name}</span> installé avec succès`, 'success');
+        installed++;
+      } catch (err) {
+        addInstallLog(`✗ <span class="pkg-name">${dep.name}</span> - ${err.message}`, 'error');
+        errors++;
+      }
+    }
+    
+    // Fin de l'installation
+    logTitle.classList.add('done');
+    logStatus.textContent = `Terminé: ${installed} installé(s), ${errors} erreur(s)`;
+    
+    // Recharger les dépendances
+    await loadDependencies();
+  }
+  
+  // Fermer le panel de log
+  document.getElementById('btn-close-install-log').addEventListener('click', () => {
+    document.getElementById('install-log-panel').classList.add('hidden');
+  });
+  
   // IDE
   document.getElementById('btn-open-ide').addEventListener('click', openIDE);
   document.getElementById('btn-apply-code').addEventListener('click', applyCodeFromIDE);
@@ -1421,6 +1738,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Dependencies
   document.getElementById('btn-new-dep').addEventListener('click', openDepModal);
   document.getElementById('btn-clean-deps').addEventListener('click', cleanUnusedDependencies);
+  document.getElementById('btn-install-all-missing').addEventListener('click', installAllMissingDeps);
   
   document.getElementById('dep-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1452,6 +1770,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Rate limit toggle
   document.getElementById('route-ratelimit').addEventListener('change', (e) => {
     document.getElementById('ratelimit-config').classList.toggle('hidden', !e.target.checked);
+  });
+  
+  // Env vars toggle
+  document.getElementById('route-envvars-toggle').addEventListener('change', (e) => {
+    document.getElementById('envvars-config').classList.toggle('hidden', !e.target.checked);
   });
   
   // Language change - update help text

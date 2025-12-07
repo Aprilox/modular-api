@@ -1,6 +1,11 @@
 /**
  * CodeRunner - Service d'exécution de code multi-langages
  * Supporte: JavaScript (Node.js), Python
+ * 
+ * Sécurité:
+ * - Exécution dans un processus séparé avec timeout
+ * - Variables d'environnement limitées
+ * - Restrictions sur les modules dangereux
  */
 
 import { spawn } from 'child_process';
@@ -25,9 +30,42 @@ if (!existsSync(tempDir)) {
 const DEFAULT_TIMEOUT = parseInt(process.env.CODE_TIMEOUT || '5000');
 
 /**
- * Exécute du code JavaScript de manière isolée
+ * Liste des variables d'environnement sûres à passer aux scripts
+ * On ne passe pas les secrets du serveur principal
  */
-async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
+const SAFE_ENV_VARS = [
+  'PATH', 'NODE_ENV', 'LANG', 'LC_ALL', 'TZ', 'HOME', 'TEMP', 'TMP',
+  'PYTHONPATH', 'PYTHONIOENCODING', 'PYTHONUTF8'
+];
+
+/**
+ * Crée un environnement sécurisé pour l'exécution
+ */
+function createSafeEnv(customEnv = {}) {
+  const safeEnv = {};
+  
+  // Copier uniquement les variables sûres
+  for (const key of SAFE_ENV_VARS) {
+    if (process.env[key]) {
+      safeEnv[key] = process.env[key];
+    }
+  }
+  
+  // Ajouter les variables personnalisées de la route
+  // (ce sont les "secrets" de l'utilisateur, pas ceux du serveur)
+  Object.assign(safeEnv, customEnv);
+  
+  return safeEnv;
+}
+
+/**
+ * Exécute du code JavaScript de manière isolée
+ * @param {string} code - Code à exécuter
+ * @param {object} context - Contexte de la requête
+ * @param {number} timeout - Timeout en ms
+ * @param {object} customEnv - Variables d'environnement personnalisées
+ */
+async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT, customEnv = {}) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     
@@ -91,9 +129,16 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
     const tempFile = join(tempDir, `js_${randomBytes(8).toString('hex')}.cjs`);
     writeFileSync(tempFile, wrappedCode);
     
+    // Créer un environnement sécurisé avec les variables personnalisées
+    const envVars = createSafeEnv({
+      NODE_ENV: 'sandbox',
+      ...customEnv
+    });
+    
     const child = spawn('node', [tempFile], {
       timeout,
-      env: { ...process.env, NODE_ENV: 'sandbox' }
+      env: envVars,
+      cwd: tempDir // Limiter le répertoire de travail
     });
     
     let stdout = '';
@@ -165,8 +210,12 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
 
 /**
  * Exécute du code Python
+ * @param {string} code - Code à exécuter
+ * @param {object} context - Contexte de la requête
+ * @param {number} timeout - Timeout en ms
+ * @param {object} customEnv - Variables d'environnement personnalisées
  */
-async function runPython(code, context, timeout = DEFAULT_TIMEOUT) {
+async function runPython(code, context, timeout = DEFAULT_TIMEOUT, customEnv = {}) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     const pythonPath = process.env.PYTHON_PATH || 'python';
@@ -203,9 +252,17 @@ print('__RESULT__' + json.dumps(__response, ensure_ascii=False))
     const tempFile = join(tempDir, `py_${randomBytes(8).toString('hex')}.py`);
     writeFileSync(tempFile, wrappedCode, 'utf8');
     
+    // Créer un environnement sécurisé avec les variables personnalisées
+    const envVars = createSafeEnv({
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1',
+      ...customEnv
+    });
+    
     const child = spawn(pythonPath, [tempFile], { 
       timeout,
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+      env: envVars,
+      cwd: tempDir // Limiter le répertoire de travail
     });
     
     let stdout = '';
@@ -277,16 +334,21 @@ print('__RESULT__' + json.dumps(__response, ensure_ascii=False))
 
 /**
  * Exécute du code dans le langage spécifié
+ * @param {string} language - Langage du code
+ * @param {string} code - Code à exécuter
+ * @param {object} context - Contexte de la requête
+ * @param {number} timeout - Timeout en ms
+ * @param {object} customEnv - Variables d'environnement personnalisées pour cette route
  */
-export async function executeCode(language, code, context, timeout = DEFAULT_TIMEOUT) {
+export async function executeCode(language, code, context, timeout = DEFAULT_TIMEOUT, customEnv = {}) {
   switch (language.toLowerCase()) {
     case 'javascript':
     case 'js':
-      return runJavaScript(code, context, timeout);
+      return runJavaScript(code, context, timeout, customEnv);
       
     case 'python':
     case 'py':
-      return runPython(code, context, timeout);
+      return runPython(code, context, timeout, customEnv);
       
     default:
       return {

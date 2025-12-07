@@ -74,6 +74,12 @@ function formatTimeAgo(date) {
   return formatDate(date);
 }
 
+function formatNumber(num) {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num.toString();
+}
+
 function updateCodeHelp(language) {
   const helpEl = document.getElementById('code-help');
   const helps = {
@@ -567,6 +573,7 @@ async function renderKeys() {
         ${permissionsHtml}
       </div>
       <div class="key-meta">
+        <span class="key-badge">${formatNumber(key.totalRequests || 0)} requêtes</span>
         ${key.quotaEnabled ? `<span class="key-badge">Quota: ${key.quotaUsed}/${key.quotaLimit}</span>` : ''}
       </div>
       <div class="key-card-footer">

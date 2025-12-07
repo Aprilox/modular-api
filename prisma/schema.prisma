@@ -72,6 +72,9 @@ model ApiKey {
   quotaUsed     Int     @default(0)
   quotaResetAt  DateTime?
   
+  // Statistiques
+  totalRequests Int     @default(0) // Nombre total de requêtes (sans limite)
+  
   // État
   enabled     Boolean  @default(true)
   expiresAt   DateTime?

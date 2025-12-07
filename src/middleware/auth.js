@@ -143,6 +143,12 @@ export function apiAuth(prisma) {
       });
     }
     
+    // Incrémenter le compteur total de requêtes
+    await prisma.apiKey.update({
+      where: { id: apiKey.id },
+      data: { totalRequests: { increment: 1 } }
+    });
+    
     // Stocker les infos de la clé API dans la requête
     request.apiKey = apiKey;
   };

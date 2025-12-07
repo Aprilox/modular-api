@@ -164,6 +164,7 @@ export default async function adminRoutes(fastify, options) {
         quotaPeriod: true,
         quotaUsed: true,
         quotaResetAt: true,
+        totalRequests: true,
         enabled: true,
         expiresAt: true,
         createdAt: true,

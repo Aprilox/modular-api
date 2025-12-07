@@ -95,8 +95,7 @@ function updateCodeHelp(language) {
          <strong>Fonctions:</strong> jsonResp(data, status), respond(data, status, headers)`,
     perl: `<strong>Variables:</strong> $request, $params, $query, $body, $headers<br>
            <strong>Fonctions:</strong> json_resp($data, $status), respond($data, $status, $headers)`,
-    bash: `<strong>Variables d'env:</strong> REQUEST_METHOD, REQUEST_PATH, REQUEST_QUERY, REQUEST_BODY<br>
-           <strong>Sortie:</strong> echo ou Write-Output pour retourner du texte/JSON`
+    bash: `<strong>Sortie:</strong> Retournez du JSON, ex: Write-Output '{"key":"value"}'`
   };
   helpEl.innerHTML = helps[language] || helps.javascript;
 }
@@ -245,7 +244,7 @@ function updateIDEHelp(language) {
     ruby: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
     go: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> jsonResp(data, status), respond(data, status, headers)`,
     perl: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json_resp($data, $status), respond($data, $status, $headers)`,
-    bash: `<strong>Variables d'env:</strong> REQUEST_METHOD, REQUEST_PATH, REQUEST_QUERY, REQUEST_BODY | <strong>Sortie:</strong> echo / Write-Output`
+    bash: `<strong>Sortie:</strong> Retournez du JSON directement, ex: Write-Output '{"key":"value"}'`
   };
   document.getElementById('ide-help').innerHTML = helps[language] || helps.javascript;
 }

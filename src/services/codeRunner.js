@@ -481,12 +481,13 @@ echo '__RESULT__' . json_encode($__response);
 }
 
 /**
- * Exécute du code Go
+ * Exécute du code Go (simplifié - retourne directement le output)
  */
 async function runGo(code, context, timeout = DEFAULT_TIMEOUT) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     
+    // Simplified Go wrapper - just output JSON directly
     const wrappedCode = `package main
 
 import (
@@ -494,42 +495,28 @@ import (
 	"fmt"
 )
 
-var request map[string]interface{}
-var params map[string]interface{}
-var query map[string]interface{}
-var body map[string]interface{}
-var headers map[string]interface{}
-var __response = map[string]interface{}{"status": 200, "body": nil, "headers": map[string]interface{}{}}
-
-func respond(data interface{}, status int, headers map[string]interface{}) {
-	__response = map[string]interface{}{"status": status, "body": data, "headers": headers}
-}
-
-func jsonResp(data interface{}, status int) {
-	respond(data, status, map[string]interface{}{"Content-Type": "application/json"})
-}
-
 func main() {
-	var context map[string]interface{}
-	json.Unmarshal([]byte(\`${JSON.stringify(context).replace(/`/g, '\\`')}\`), &context)
+	// Context data
+	contextJSON := \`${JSON.stringify(context).replace(/\\/g, '\\\\').replace(/`/g, '\\`')}\`
+	var ctx map[string]interface{}
+	json.Unmarshal([]byte(contextJSON), &ctx)
 	
-	if r, ok := context["request"].(map[string]interface{}); ok { request = r }
-	if p, ok := context["params"].(map[string]interface{}); ok { params = p }
-	if q, ok := context["query"].(map[string]interface{}); ok { query = q }
-	if b, ok := context["body"].(map[string]interface{}); ok { body = b }
-	if h, ok := context["headers"].(map[string]interface{}); ok { headers = h }
+	query, _ := ctx["query"].(map[string]interface{})
+	params, _ := ctx["params"].(map[string]interface{})
+	body, _ := ctx["body"].(map[string]interface{})
+	_ = query
+	_ = params  
+	_ = body
 
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				__response = map[string]interface{}{"status": 500, "body": map[string]interface{}{"error": fmt.Sprintf("%v", r)}, "headers": map[string]interface{}{}}
-			}
-		}()
-${code.split('\n').map(line => '\t\t' + line).join('\n')}
-	}()
+	// User code should set 'result' variable
+	var result interface{}
+	
+${code}
 
-	result, _ := json.Marshal(__response)
-	fmt.Print("__RESULT__" + string(result))
+	if result != nil {
+		output, _ := json.Marshal(result)
+		fmt.Print(string(output))
+	}
 }`;
     
     const tempFile = join(tempDir, `go_${randomBytes(8).toString('hex')}.go`);
@@ -543,22 +530,21 @@ ${code.split('\n').map(line => '\t\t' + line).join('\n')}
     child.stdout.on('data', (data) => { stdout += data.toString(); });
     child.stderr.on('data', (data) => { stderr += data.toString(); });
     
-    child.on('close', (code) => {
+    child.on('close', (exitCode) => {
       try { unlinkSync(tempFile); } catch (e) {}
       const executionTime = Date.now() - startTime;
-      const resultMatch = stdout.match(/__RESULT__(.+)$/m);
       
-      if (resultMatch) {
-        try {
-          const result = JSON.parse(resultMatch[1]);
-          resolve({ success: true, ...result, executionTime });
-        } catch (e) {
-          resolve({ success: false, status: 500, body: { error: 'Parse error' }, executionTime });
-        }
-      } else if (stderr) {
+      if (stderr && !stdout) {
         resolve({ success: false, status: 500, body: { error: stderr.trim() }, executionTime });
+      } else if (stdout) {
+        try {
+          const result = JSON.parse(stdout.trim());
+          resolve({ success: true, status: 200, body: result, executionTime });
+        } catch (e) {
+          resolve({ success: true, status: 200, body: stdout.trim(), executionTime });
+        }
       } else {
-        resolve({ success: true, status: 200, body: stdout.trim() || null, executionTime });
+        resolve({ success: true, status: 200, body: null, executionTime });
       }
     });
     

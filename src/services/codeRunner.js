@@ -36,26 +36,41 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
       const { request, params, query, body, headers } = context;
       
       let __response = { status: 200, body: null, headers: {} };
+      let __responded = false;
       
       function respond(data, status = 200, headers = {}) {
+        if (__responded) return;
+        __responded = true;
         __response = { status, body: data, headers };
+        console.log('__RESULT__' + JSON.stringify(__response));
       }
       
       function json(data, status = 200) {
         respond(data, status, { 'Content-Type': 'application/json' });
       }
       
-      try {
-        ${code}
-      } catch (error) {
-        __response = { 
-          status: 500, 
-          body: { error: error.message },
-          headers: { 'Content-Type': 'application/json' }
-        };
-      }
-      
-      console.log('__RESULT__' + JSON.stringify(__response));
+      (async () => {
+        try {
+          ${code}
+          
+          // Attendre un peu pour les promesses non-await
+          await new Promise(r => setTimeout(r, 100));
+          
+          // Si pas de réponse envoyée, envoyer la réponse par défaut
+          if (!__responded) {
+            console.log('__RESULT__' + JSON.stringify(__response));
+          }
+        } catch (error) {
+          if (!__responded) {
+            __response = { 
+              status: 500, 
+              body: { error: error.message },
+              headers: { 'Content-Type': 'application/json' }
+            };
+            console.log('__RESULT__' + JSON.stringify(__response));
+          }
+        }
+      })();
     `;
     
     const tempFile = join(tempDir, `js_${randomBytes(8).toString('hex')}.js`);

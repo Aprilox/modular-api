@@ -531,6 +531,7 @@ async function saveRoute(formData) {
     loadRoutes();
     
     // Mettre à jour les dépendances après sauvegarde d'une route
+    await updateDependencyUsage();
     checkMissingDependencies();
   } catch (e) {
     showToast(e.message, 'error');
@@ -544,6 +545,10 @@ async function deleteRoute(id) {
     await api(`/admin/routes/${id}`, { method: 'DELETE' });
     showToast('Route supprimée', 'success');
     loadRoutes();
+    
+    // Mettre à jour les dépendances après suppression
+    await updateDependencyUsage();
+    checkMissingDependencies();
   } catch (e) {
     showToast(e.message, 'error');
   }
@@ -954,6 +959,9 @@ let missingDepsCount = 0;
 
 async function loadDependencies() {
   try {
+    // D'abord mettre à jour les usedBy
+    await updateDependencyUsage();
+    
     const data = await api('/admin/dependencies');
     dependencies = data.dependencies;
     renderDependencies();

@@ -1111,7 +1111,10 @@ async function quickInstallDep(name, language, btn) {
 
 async function updateDependencyUsage() {
   try {
-    const result = await api('/admin/dependencies/update-usage', { method: 'POST' });
+    const result = await api('/admin/dependencies/update-usage', { 
+      method: 'POST',
+      body: JSON.stringify({})
+    });
     return result;
   } catch (e) {
     console.error('Erreur mise à jour usage:', e);
@@ -1179,7 +1182,10 @@ async function cleanUnusedDependencies() {
   showToast('Nettoyage en cours...', 'info');
   
   try {
-    const result = await api('/admin/dependencies/clean', { method: 'POST' });
+    const result = await api('/admin/dependencies/clean', { 
+      method: 'POST',
+      body: JSON.stringify({})
+    });
     
     if (result.removed.length > 0) {
       showToast(`${result.removed.length} dépendance(s) supprimée(s)`, 'success');

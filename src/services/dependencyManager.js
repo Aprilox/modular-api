@@ -52,18 +52,21 @@ function detectJsImports(code) {
 function detectPythonImports(code) {
   const imports = new Set();
   
+  // Normaliser les retours à la ligne
+  const normalizedCode = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  
   // import package ou import package.submodule
-  const importRegex = /^import\s+(\w+)/gm;
+  const importRegex = /(?:^|\n)\s*import\s+(\w+)/g;
   let match;
-  while ((match = importRegex.exec(code)) !== null) {
+  while ((match = importRegex.exec(normalizedCode)) !== null) {
     if (!isBuiltinPythonModule(match[1])) {
       imports.add(match[1]);
     }
   }
   
   // from package import ...
-  const fromImportRegex = /^from\s+(\w+)/gm;
-  while ((match = fromImportRegex.exec(code)) !== null) {
+  const fromImportRegex = /(?:^|\n)\s*from\s+(\w+)/g;
+  while ((match = fromImportRegex.exec(normalizedCode)) !== null) {
     if (!isBuiltinPythonModule(match[1])) {
       imports.add(match[1]);
     }

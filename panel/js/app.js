@@ -80,52 +80,6 @@ function formatNumber(num) {
   return num.toString();
 }
 
-function maskString(str, visibleChars = 4) {
-  if (!str || str.length <= visibleChars) return '••••••••';
-  return str.substring(0, visibleChars) + '••••••••';
-}
-
-function maskSensitiveHeaders(headers) {
-  const sensitiveKeys = ['x-api-key', 'authorization', 'api-key', 'apikey', 'token', 'secret'];
-  const masked = { ...headers };
-  
-  for (const key of Object.keys(masked)) {
-    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
-      masked[key] = maskString(masked[key]);
-    }
-  }
-  
-  return masked;
-}
-
-function formatHeadersWithToggle(maskedHeaders, originalHeaders) {
-  const maskedJson = JSON.stringify(maskedHeaders, null, 2);
-  const originalJson = JSON.stringify(originalHeaders, null, 2);
-  
-  return `<div class="headers-content">
-    <pre class="masked-content">${maskedJson}</pre>
-    <pre class="original-content hidden">${originalJson}</pre>
-  </div>
-  <button type="button" class="btn btn-sm btn-secondary toggle-headers-btn" onclick="toggleHeadersVisibility(this)">
-    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
-    Révéler
-  </button>`;
-}
-
-function toggleHeadersVisibility(btn) {
-  const container = btn.previousElementSibling;
-  const masked = container.querySelector('.masked-content');
-  const original = container.querySelector('.original-content');
-  
-  masked.classList.toggle('hidden');
-  original.classList.toggle('hidden');
-  
-  const isRevealed = !original.classList.contains('hidden');
-  btn.innerHTML = isRevealed 
-    ? `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/></svg> Masquer`
-    : `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg> Révéler`;
-}
-
 function updateCodeHelp(language) {
   const helpEl = document.getElementById('code-help');
   const helps = {
@@ -396,17 +350,12 @@ function showLogDetailFromRecent(logId) {
   document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
   document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
   document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
-  document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? `<span style="color: var(--success);">${log.apiKey.name}</span>` : '<span style="color: var(--gray-400);">Aucune</span>';
+  document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? '<span style="color: var(--success);">Oui</span>' : '<span style="color: var(--gray-400);">Non</span>';
   
-  // Format headers JSON (mask sensitive values)
+  // Format headers JSON
   try {
     const headers = log.requestHeaders ? JSON.parse(log.requestHeaders) : null;
-    if (headers) {
-      const maskedHeaders = maskSensitiveHeaders(headers);
-      document.getElementById('log-detail-headers').innerHTML = formatHeadersWithToggle(maskedHeaders, headers);
-    } else {
-      document.getElementById('log-detail-headers').textContent = '-';
-    }
+    document.getElementById('log-detail-headers').textContent = headers ? JSON.stringify(headers, null, 2) : '-';
   } catch (e) {
     document.getElementById('log-detail-headers').textContent = log.requestHeaders || '-';
   }
@@ -654,13 +603,12 @@ async function renderKeys() {
         </span>
         <span class="key-auth-method">${authMethodLabel}</span>
       </div>
-      <div class="key-value key-hidden">
-        <code class="key-masked">${maskString(key.key, 8)}</code>
-        <code class="key-revealed hidden">${key.key}</code>
-        <button onclick="copyToClipboard('${key.key}')" title="Copier">
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
-        </button>
-      </div>
+<div class="key-value">
+          <code class="key-hidden">${key.key}</code>
+          <button onclick="copyToClipboard('${key.key}')" title="Copier">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/></svg>
+          </button>
+        </div>
       <div class="key-permissions-list">
         ${permissionsHtml}
       </div>
@@ -932,17 +880,12 @@ function showLogDetail(logId) {
   document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
   document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
   document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
-  document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? `<span style="color: var(--success);">${log.apiKey.name}</span>` : '<span style="color: var(--gray-400);">Aucune</span>';
+  document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? '<span style="color: var(--success);">Oui</span>' : '<span style="color: var(--gray-400);">Non</span>';
   
-  // Format headers JSON (mask sensitive values)
+  // Format headers JSON
   try {
     const headers = log.requestHeaders ? JSON.parse(log.requestHeaders) : null;
-    if (headers) {
-      const maskedHeaders = maskSensitiveHeaders(headers);
-      document.getElementById('log-detail-headers').innerHTML = formatHeadersWithToggle(maskedHeaders, headers);
-    } else {
-      document.getElementById('log-detail-headers').textContent = '-';
-    }
+    document.getElementById('log-detail-headers').textContent = headers ? JSON.stringify(headers, null, 2) : '-';
   } catch (e) {
     document.getElementById('log-detail-headers').textContent = log.requestHeaders || '-';
   }

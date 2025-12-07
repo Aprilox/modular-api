@@ -741,6 +741,18 @@ textarea::placeholder {
   color: var(--gray-700);
 }
 
+.key-hidden {
+  filter: blur(4px);
+  transition: filter 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.key-hidden:hover {
+  filter: blur(0);
+  user-select: text;
+}
+
 .key-meta {
   display: flex;
   flex-wrap: wrap;
@@ -1376,37 +1388,6 @@ textarea::placeholder {
   max-height: 200px;
   overflow-y: auto;
   margin: 0;
-}
-
-.log-detail-json .headers-content pre {
-  margin: 0;
-  background: transparent;
-  padding: 0;
-}
-
-.toggle-headers-btn {
-  margin-top: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-/* API Key masking */
-.key-value.key-hidden .key-revealed {
-  display: none;
-}
-
-.key-value.key-hidden:hover .key-masked {
-  display: none;
-}
-
-.key-value.key-hidden:hover .key-revealed {
-  display: inline;
-}
-
-.key-masked {
-  color: var(--gray-400);
-  letter-spacing: 1px;
 }
 
 .log-item {

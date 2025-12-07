@@ -1585,6 +1585,21 @@ textarea::placeholder {
   margin: 0;
 }
 
+.log-detail-error-section {
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca;
+}
+
+.log-detail-error-section h4 {
+  color: #dc2626 !important;
+  border-bottom-color: #fecaca !important;
+}
+
+.log-detail-error-box {
+  background: #7f1d1d !important;
+  color: #fecaca !important;
+}
+
 .log-item {
   cursor: pointer;
   transition: background-color 0.15s;
@@ -1601,6 +1616,19 @@ textarea::placeholder {
 
 .logs-table tbody tr:hover {
   background: var(--primary-light) !important;
+}
+
+.logs-table tbody tr.has-error {
+  background: #fef2f2;
+}
+
+.logs-table tbody tr.has-error:hover {
+  background: #fee2e2 !important;
+}
+
+.error-indicator {
+  margin-left: 0.25rem;
+  cursor: help;
 }
 
 /* ============================================

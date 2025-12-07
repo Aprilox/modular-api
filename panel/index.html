@@ -580,10 +580,6 @@
               <span class="label">Status</span>
               <span class="value" id="log-detail-status"></span>
             </div>
-            <div class="log-detail-row" id="log-detail-error-row" style="display: none;">
-              <span class="label">Erreur</span>
-              <span class="value" id="log-detail-error" style="color: var(--danger);"></span>
-            </div>
             <div class="log-detail-row">
               <span class="label">Temps de réponse</span>
               <span class="value" id="log-detail-time"></span>
@@ -597,6 +593,11 @@
               <span class="value" id="log-detail-apikey"></span>
             </div>
           </div>
+        </div>
+        
+        <div class="log-detail-section log-detail-full log-detail-error-section" id="log-detail-error-section" style="display: none;">
+          <h4>❌ Erreur</h4>
+          <pre class="log-detail-json log-detail-error-box" id="log-detail-error">-</pre>
         </div>
         
         <div class="log-detail-section log-detail-full">

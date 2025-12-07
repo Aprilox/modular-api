@@ -190,7 +190,7 @@ async function login(password) {
 
 async function logout() {
   try {
-    await api('/auth/logout', { method: 'POST' });
+    await api('/auth/logout', { method: 'POST', body: JSON.stringify({}) });
   } catch (e) {}
   
   // Supprimer toutes les données de session

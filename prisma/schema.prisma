@@ -95,6 +95,8 @@ model RequestLog {
   method      String
   ip          String
   userAgent   String?
+  requestHeaders String? // JSON des headers (tronqué)
+  requestBody    String? // JSON du body (tronqué)
   
   // Réponse
   statusCode  Int

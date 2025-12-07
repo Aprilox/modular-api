@@ -286,7 +286,17 @@ export default async function adminRoutes(fastify, options) {
       prisma.requestLog.findMany({
         take: 100,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          path: true,
+          method: true,
+          ip: true,
+          userAgent: true,
+          requestHeaders: true,
+          requestBody: true,
+          statusCode: true,
+          responseTime: true,
+          createdAt: true,
           route: { select: { name: true, path: true } },
           apiKey: { select: { name: true } }
         }
@@ -331,7 +341,17 @@ export default async function adminRoutes(fastify, options) {
         take: parseInt(limit),
         skip: parseInt(offset),
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          path: true,
+          method: true,
+          ip: true,
+          userAgent: true,
+          requestHeaders: true,
+          requestBody: true,
+          statusCode: true,
+          responseTime: true,
+          createdAt: true,
           route: { select: { name: true, path: true } },
           apiKey: { select: { name: true } }
         }

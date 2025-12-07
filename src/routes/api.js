@@ -197,12 +197,27 @@ function extractParams(pattern, path) {
  */
 async function logRequest(prisma, request, route, statusCode, responseTime) {
   try {
+    // Tronquer les données pour éviter les logs trop gros
+    const truncate = (str, max = 2000) => {
+      if (!str) return null;
+      const s = typeof str === 'string' ? str : JSON.stringify(str);
+      return s.length > max ? s.substring(0, max) + '...' : s;
+    };
+    
+    // Filtrer les headers sensibles
+    const safeHeaders = { ...request.headers };
+    delete safeHeaders['authorization'];
+    delete safeHeaders['x-api-key'];
+    delete safeHeaders['cookie'];
+    
     await prisma.requestLog.create({
       data: {
         path: request.url,
         method: request.method,
         ip: request.ip || request.headers['x-forwarded-for'] || 'unknown',
         userAgent: request.headers['user-agent'],
+        requestHeaders: truncate(safeHeaders),
+        requestBody: truncate(request.body),
         statusCode,
         responseTime,
         routeId: route?.id,

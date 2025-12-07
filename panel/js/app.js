@@ -308,8 +308,11 @@ async function loadDashboardData() {
   }
 }
 
+let recentLogs = [];
+
 function renderRecentLogs(logs) {
   const container = document.getElementById('recent-logs');
+  recentLogs = logs;
   
   if (!logs.length) {
     container.innerHTML = '<p class="empty-state">Aucune requête enregistrée</p>';
@@ -317,7 +320,7 @@ function renderRecentLogs(logs) {
   }
   
   container.innerHTML = logs.map(log => `
-    <div class="log-item">
+    <div class="log-item" onclick="showLogDetailFromRecent('${log.id}')">
       <div class="log-status ${log.statusCode < 400 ? 'success' : log.statusCode < 500 ? 'warning' : 'error'}"></div>
       <div class="log-info">
         <div class="log-path">
@@ -331,6 +334,42 @@ function renderRecentLogs(logs) {
       <div class="log-time">${formatTimeAgo(log.createdAt)}</div>
     </div>
   `).join('');
+}
+
+function showLogDetailFromRecent(logId) {
+  const log = recentLogs.find(l => l.id === logId);
+  if (!log) return;
+  
+  // Fill in the details
+  document.getElementById('log-detail-method').innerHTML = `<span class="method-badge ${log.method.toLowerCase()}">${log.method}</span>`;
+  document.getElementById('log-detail-path').textContent = log.path;
+  document.getElementById('log-detail-ip').textContent = log.ip || '-';
+  document.getElementById('log-detail-useragent').textContent = log.userAgent || '-';
+  document.getElementById('log-detail-date').textContent = formatDate(log.createdAt);
+  
+  document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
+  document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
+  document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
+  document.getElementById('log-detail-apikey').textContent = log.apiKey?.name || '-';
+  
+  // Format headers JSON
+  try {
+    const headers = log.requestHeaders ? JSON.parse(log.requestHeaders) : null;
+    document.getElementById('log-detail-headers').textContent = headers ? JSON.stringify(headers, null, 2) : '-';
+  } catch (e) {
+    document.getElementById('log-detail-headers').textContent = log.requestHeaders || '-';
+  }
+  
+  // Format body JSON
+  try {
+    const body = log.requestBody ? JSON.parse(log.requestBody) : null;
+    document.getElementById('log-detail-body').textContent = body ? JSON.stringify(body, null, 2) : '-';
+  } catch (e) {
+    document.getElementById('log-detail-body').textContent = log.requestBody || '-';
+  }
+  
+  // Show modal
+  document.getElementById('log-detail-modal').classList.remove('hidden');
 }
 
 // ============================================
@@ -779,9 +818,12 @@ async function deleteKey(id) {
 // LOGS
 // ============================================
 
+let allLogs = [];
+
 async function loadLogs() {
   try {
     const data = await api('/admin/logs?limit=100');
+    allLogs = data.logs;
     renderLogsTable(data.logs);
   } catch (e) {
     showToast('Erreur lors du chargement des logs', 'error');
@@ -810,7 +852,7 @@ function renderLogsTable(logs) {
       </thead>
       <tbody>
         ${logs.map(log => `
-          <tr>
+          <tr data-log-id="${log.id}" onclick="showLogDetail('${log.id}')">
             <td>${formatDate(log.createdAt)}</td>
             <td><span class="method-badge ${log.method.toLowerCase()}">${log.method}</span></td>
             <td style="font-family: monospace; font-size: 0.85rem;">${log.path}</td>
@@ -822,6 +864,42 @@ function renderLogsTable(logs) {
       </tbody>
     </table>
   `;
+}
+
+function showLogDetail(logId) {
+  const log = allLogs.find(l => l.id === logId);
+  if (!log) return;
+  
+  // Fill in the details
+  document.getElementById('log-detail-method').innerHTML = `<span class="method-badge ${log.method.toLowerCase()}">${log.method}</span>`;
+  document.getElementById('log-detail-path').textContent = log.path;
+  document.getElementById('log-detail-ip').textContent = log.ip || '-';
+  document.getElementById('log-detail-useragent').textContent = log.userAgent || '-';
+  document.getElementById('log-detail-date').textContent = formatDate(log.createdAt);
+  
+  document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
+  document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
+  document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
+  document.getElementById('log-detail-apikey').textContent = log.apiKey?.name || '-';
+  
+  // Format headers JSON
+  try {
+    const headers = log.requestHeaders ? JSON.parse(log.requestHeaders) : null;
+    document.getElementById('log-detail-headers').textContent = headers ? JSON.stringify(headers, null, 2) : '-';
+  } catch (e) {
+    document.getElementById('log-detail-headers').textContent = log.requestHeaders || '-';
+  }
+  
+  // Format body JSON
+  try {
+    const body = log.requestBody ? JSON.parse(log.requestBody) : null;
+    document.getElementById('log-detail-body').textContent = body ? JSON.stringify(body, null, 2) : '-';
+  } catch (e) {
+    document.getElementById('log-detail-body').textContent = log.requestBody || '-';
+  }
+  
+  // Show modal
+  document.getElementById('log-detail-modal').classList.remove('hidden');
 }
 
 async function clearLogs() {

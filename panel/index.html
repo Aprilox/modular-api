@@ -476,6 +476,74 @@
     </div>
   </div>
 
+  <!-- Log Detail Modal -->
+  <div id="log-detail-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3>Détails de la requête</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body log-detail-body">
+        <div class="log-detail-grid">
+          <div class="log-detail-section">
+            <h4>Requête</h4>
+            <div class="log-detail-row">
+              <span class="label">Méthode</span>
+              <span class="value" id="log-detail-method"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">Chemin</span>
+              <span class="value" id="log-detail-path"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">IP</span>
+              <span class="value" id="log-detail-ip"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">User Agent</span>
+              <span class="value" id="log-detail-useragent"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">Date</span>
+              <span class="value" id="log-detail-date"></span>
+            </div>
+          </div>
+          
+          <div class="log-detail-section">
+            <h4>Réponse</h4>
+            <div class="log-detail-row">
+              <span class="label">Status</span>
+              <span class="value" id="log-detail-status"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">Temps de réponse</span>
+              <span class="value" id="log-detail-time"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">Route</span>
+              <span class="value" id="log-detail-route"></span>
+            </div>
+            <div class="log-detail-row">
+              <span class="label">Clé API</span>
+              <span class="value" id="log-detail-apikey"></span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="log-detail-section log-detail-full">
+          <h4>Headers de la requête</h4>
+          <pre class="log-detail-json" id="log-detail-headers">-</pre>
+        </div>
+        
+        <div class="log-detail-section log-detail-full">
+          <h4>Body de la requête</h4>
+          <pre class="log-detail-json" id="log-detail-body">-</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast notifications -->
   <div id="toast-container"></div>
 

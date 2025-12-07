@@ -37,12 +37,15 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
       
       let __response = { status: 200, body: null, headers: {} };
       let __responded = false;
+      let __timeout = null;
       
       function respond(data, status = 200, headers = {}) {
         if (__responded) return;
         __responded = true;
         __response = { status, body: data, headers };
+        if (__timeout) clearTimeout(__timeout);
         console.log('__RESULT__' + JSON.stringify(__response));
+        process.exit(0);
       }
       
       function json(data, status = 200) {
@@ -51,15 +54,25 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
       
       (async () => {
         try {
-          ${code}
+          const __userCode = async () => {
+            ${code}
+          };
           
-          // Attendre un peu pour les promesses non-await
-          await new Promise(r => setTimeout(r, 100));
+          const __result = __userCode();
           
-          // Si pas de réponse envoyée, envoyer la réponse par défaut
-          if (!__responded) {
-            console.log('__RESULT__' + JSON.stringify(__response));
+          // Si c'est une promesse, on attend
+          if (__result && typeof __result.then === 'function') {
+            await __result;
           }
+          
+          // Attendre un délai pour les .then() en chaîne
+          __timeout = setTimeout(() => {
+            if (!__responded) {
+              console.log('__RESULT__' + JSON.stringify(__response));
+              process.exit(0);
+            }
+          }, 4000);
+          
         } catch (error) {
           if (!__responded) {
             __response = { 
@@ -68,6 +81,7 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
               headers: { 'Content-Type': 'application/json' }
             };
             console.log('__RESULT__' + JSON.stringify(__response));
+            process.exit(1);
           }
         }
       })();

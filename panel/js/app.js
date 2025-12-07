@@ -1158,7 +1158,7 @@ async function installDependency(formData) {
   }
   
   // Récupérer le bouton submit et afficher le loading
-  const btn = document.querySelector('#dep-form button[type="submit"]');
+  const btn = document.querySelector('button[form="dep-form"]');
   const originalHtml = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `<span class="spinner"></span> Installation...`;

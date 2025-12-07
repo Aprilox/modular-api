@@ -286,6 +286,9 @@ function switchSection(section) {
     case 'logs':
       loadLogs();
       break;
+    case 'dependencies':
+      loadDependencies();
+      break;
   }
 }
 
@@ -915,6 +918,129 @@ async function clearLogs() {
 }
 
 // ============================================
+// DEPENDENCIES
+// ============================================
+
+let dependencies = [];
+let depFilter = 'all';
+
+async function loadDependencies() {
+  try {
+    const data = await api('/admin/dependencies');
+    dependencies = data.dependencies;
+    renderDependencies();
+  } catch (e) {
+    showToast('Erreur lors du chargement des dépendances', 'error');
+  }
+}
+
+function renderDependencies() {
+  const container = document.getElementById('deps-list');
+  
+  let filtered = dependencies;
+  if (depFilter !== 'all') {
+    filtered = dependencies.filter(d => d.language === depFilter);
+  }
+  
+  if (!filtered.length) {
+    container.innerHTML = '<p class="empty-state">Aucune dépendance installée</p>';
+    return;
+  }
+  
+  container.innerHTML = filtered.map(dep => `
+    <div class="dep-card" data-id="${dep.id}">
+      <div class="dep-card-header">
+        <span class="dep-name">
+          ${dep.name}
+          <span class="dep-lang-badge ${dep.language}">${dep.language === 'javascript' ? 'JS' : 'PY'}</span>
+        </span>
+      </div>
+      <div class="dep-meta">
+        <div class="dep-meta-item">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+          Installé le ${formatDate(dep.installedAt)}
+        </div>
+      </div>
+      <div class="dep-used-by">
+        ${dep.usedByCount > 0 
+          ? `Utilisé par ${dep.usedByCount} route(s): ${dep.usedByRoutes.map(r => `<span class="route-tag">${r.path}</span>`).join('')}` 
+          : '<span style="color: var(--warning);">⚠️ Non utilisé</span>'}
+      </div>
+      <div class="dep-card-footer">
+        <button class="btn btn-sm btn-danger" onclick="uninstallDependency('${dep.id}', '${dep.name}')">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          Désinstaller
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openDepModal() {
+  document.getElementById('dep-modal').classList.remove('hidden');
+  document.getElementById('dep-form').reset();
+}
+
+async function installDependency(formData) {
+  const name = formData.get('name').trim();
+  const language = formData.get('language');
+  
+  if (!name) {
+    showToast('Veuillez entrer un nom de package', 'error');
+    return;
+  }
+  
+  showToast(`Installation de ${name}...`, 'info');
+  
+  try {
+    await api('/admin/dependencies', {
+      method: 'POST',
+      body: JSON.stringify({ name, language })
+    });
+    
+    showToast(`${name} installé avec succès`, 'success');
+    document.getElementById('dep-modal').classList.add('hidden');
+    loadDependencies();
+  } catch (e) {
+    showToast(`Erreur: ${e.message}`, 'error');
+  }
+}
+
+async function uninstallDependency(id, name) {
+  if (!confirm(`Êtes-vous sûr de vouloir désinstaller ${name} ?`)) return;
+  
+  showToast(`Désinstallation de ${name}...`, 'info');
+  
+  try {
+    await api(`/admin/dependencies/${id}`, { method: 'DELETE' });
+    showToast(`${name} désinstallé`, 'success');
+    loadDependencies();
+  } catch (e) {
+    showToast(`Erreur: ${e.message}`, 'error');
+  }
+}
+
+async function cleanUnusedDependencies() {
+  if (!confirm('Désinstaller toutes les dépendances non utilisées ?')) return;
+  
+  showToast('Nettoyage en cours...', 'info');
+  
+  try {
+    const result = await api('/admin/dependencies/clean', { method: 'POST' });
+    
+    if (result.removed.length > 0) {
+      showToast(`${result.removed.length} dépendance(s) supprimée(s)`, 'success');
+    } else {
+      showToast('Aucune dépendance à nettoyer', 'info');
+    }
+    
+    loadDependencies();
+  } catch (e) {
+    showToast(`Erreur: ${e.message}`, 'error');
+  }
+}
+
+// ============================================
 // EVENT LISTENERS
 // ============================================
 
@@ -979,6 +1105,25 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Clear logs button
   document.getElementById('btn-clear-logs').addEventListener('click', clearLogs);
+  
+  // Dependencies
+  document.getElementById('btn-new-dep').addEventListener('click', openDepModal);
+  document.getElementById('btn-clean-deps').addEventListener('click', cleanUnusedDependencies);
+  
+  document.getElementById('dep-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    installDependency(new FormData(e.target));
+  });
+  
+  // Dependency filters
+  document.querySelectorAll('.dep-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.dep-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      depFilter = btn.dataset.filter;
+      renderDependencies();
+    });
+  });
   
   // Route form
   document.getElementById('route-form').addEventListener('submit', (e) => {

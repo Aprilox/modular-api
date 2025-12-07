@@ -141,9 +141,10 @@ async function runPython(code, context, timeout = DEFAULT_TIMEOUT) {
     const startTime = Date.now();
     const pythonPath = process.env.PYTHON_PATH || 'python';
     
-    const wrappedCode = `
+    const wrappedCode = `# -*- coding: utf-8 -*-
 import json
 import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 context = json.loads('''${JSON.stringify(context)}''')
 request = context.get('request', {})
@@ -166,13 +167,16 @@ ${code.split('\n').map(line => '    ' + line).join('\n')}
 except Exception as e:
     __response = {'status': 500, 'body': {'error': str(e)}, 'headers': {'Content-Type': 'application/json'}}
 
-print('__RESULT__' + json.dumps(__response))
+print('__RESULT__' + json.dumps(__response, ensure_ascii=False))
 `;
     
     const tempFile = join(tempDir, `py_${randomBytes(8).toString('hex')}.py`);
-    writeFileSync(tempFile, wrappedCode);
+    writeFileSync(tempFile, wrappedCode, 'utf8');
     
-    const child = spawn(pythonPath, [tempFile], { timeout });
+    const child = spawn(pythonPath, [tempFile], { 
+      timeout,
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
     
     let stdout = '';
     let stderr = '';

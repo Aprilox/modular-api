@@ -117,3 +117,16 @@ model RequestLog {
   @@index([ip])
 }
 
+// Dépendances installées
+model Dependency {
+  id          String   @id @default(cuid())
+  name        String   // Nom du package
+  version     String?  // Version installée
+  language    String   // javascript, python
+  usedBy      String   @default("") // Liste des routes qui utilisent cette dépendance (IDs séparés par virgule)
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([name, language])
+}
+

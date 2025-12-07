@@ -377,5 +377,112 @@ export default async function adminRoutes(fastify, options) {
     
     return { success: true, deleted: result.count };
   });
+
+  // ============================================
+  // DÉPENDANCES
+  // ============================================
+
+  /**
+   * GET /admin/dependencies - Liste des dépendances
+   */
+  fastify.get('/dependencies', async (request, reply) => {
+    const { listDependencies } = await import('../services/dependencyManager.js');
+    const dependencies = await listDependencies();
+    
+    // Compter les routes par dépendance
+    const routes = await prisma.apiRoute.findMany({ select: { id: true, name: true, path: true } });
+    const routesMap = {};
+    routes.forEach(r => { routesMap[r.id] = r; });
+    
+    const enriched = dependencies.map(dep => {
+      const usedByIds = dep.usedBy ? dep.usedBy.split(',').filter(Boolean) : [];
+      const usedByRoutes = usedByIds.map(id => routesMap[id]).filter(Boolean);
+      return {
+        ...dep,
+        usedByCount: usedByRoutes.length,
+        usedByRoutes
+      };
+    });
+    
+    return { dependencies: enriched };
+  });
+
+  /**
+   * POST /admin/dependencies - Installer une dépendance
+   */
+  fastify.post('/dependencies', async (request, reply) => {
+    const { name, language } = request.body;
+    
+    if (!name || !language) {
+      return reply.status(400).send({ error: 'name et language requis' });
+    }
+    
+    const { installDependency } = await import('../services/dependencyManager.js');
+    const result = await installDependency(name, language);
+    
+    if (result.success) {
+      return { success: true, dependency: result.dependency };
+    } else {
+      return reply.status(500).send({ error: result.error });
+    }
+  });
+
+  /**
+   * DELETE /admin/dependencies/:id - Désinstaller une dépendance
+   */
+  fastify.delete('/dependencies/:id', async (request, reply) => {
+    const { id } = request.params;
+    
+    const dep = await prisma.dependency.findUnique({ where: { id } });
+    if (!dep) {
+      return reply.status(404).send({ error: 'Dépendance non trouvée' });
+    }
+    
+    const { uninstallDependency } = await import('../services/dependencyManager.js');
+    const result = await uninstallDependency(dep.name, dep.language);
+    
+    if (result.success) {
+      return { success: true };
+    } else {
+      return reply.status(500).send({ error: result.error });
+    }
+  });
+
+  /**
+   * POST /admin/dependencies/detect - Détecter les dépendances dans du code
+   */
+  fastify.post('/dependencies/detect', async (request, reply) => {
+    const { code, language } = request.body;
+    
+    if (!code || !language) {
+      return reply.status(400).send({ error: 'code et language requis' });
+    }
+    
+    const { detectDependencies } = await import('../services/dependencyManager.js');
+    const result = detectDependencies(code, language);
+    
+    // Vérifier lesquelles sont déjà installées
+    const installed = await prisma.dependency.findMany({
+      where: { language: result.language }
+    });
+    const installedNames = installed.map(d => d.name);
+    
+    const packages = result.packages.map(pkg => ({
+      name: pkg,
+      installed: installedNames.includes(pkg)
+    }));
+    
+    return { packages };
+  });
+
+  /**
+   * POST /admin/dependencies/clean - Nettoyer les dépendances non utilisées
+   */
+  fastify.post('/dependencies/clean', async (request, reply) => {
+    const { cleanUnusedDependencies } = await import('../services/dependencyManager.js');
+    const removed = await cleanUnusedDependencies();
+    
+    return { success: true, removed };
+  });
 }
 

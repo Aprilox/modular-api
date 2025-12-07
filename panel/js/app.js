@@ -12,6 +12,16 @@ const API_URL = window.location.origin;
   }
 })();
 
+// Empêcher le retour arrière vers une page authentifiée après déconnexion
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+    // Page chargée depuis le cache (bouton retour)
+    if (!localStorage.getItem('token')) {
+      window.location.reload();
+    }
+  }
+});
+
 // State
 let token = localStorage.getItem('token');
 let currentSection = 'dashboard';
@@ -183,16 +193,31 @@ async function logout() {
     await api('/auth/logout', { method: 'POST' });
   } catch (e) {}
   
+  // Supprimer toutes les données de session
   token = null;
   localStorage.removeItem('token');
+  sessionStorage.clear();
+  
+  // Supprimer les cookies côté client
+  document.cookie.split(";").forEach(c => {
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+  });
   
   // Fermer tous les modals ouverts
   document.querySelectorAll('.modal').forEach(modal => {
     modal.classList.add('hidden');
   });
   
+  // Remplacer l'historique pour empêcher le retour arrière
+  window.history.replaceState(null, '', '/panel/');
+  
   showLoginScreen();
   showToast('Déconnexion réussie', 'info');
+  
+  // Recharger la page pour nettoyer complètement l'état
+  setTimeout(() => {
+    window.location.reload();
+  }, 500);
 }
 
 function openSettingsModal() {

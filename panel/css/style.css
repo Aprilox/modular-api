@@ -1016,6 +1016,10 @@ textarea::placeholder {
   margin-bottom: 1rem;
 }
 
+.settings-section form .btn {
+  margin-top: 1rem;
+}
+
 .settings-danger {
   background: #fef2f2;
   margin: 0 -1.5rem -1.5rem;

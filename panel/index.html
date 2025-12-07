@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modular API - Panel d'administration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- CodeMirror -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="login-screen" class="screen">
+    <div class="login-container">
+      <div class="login-header">
+        <div class="logo">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="10" fill="url(#gradient)"/>
+            <path d="M12 20L18 14V18H28V22H18V26L12 20Z" fill="white"/>
+            <defs>
+              <linearGradient id="gradient" x1="0" y1="0" x2="40" y2="40">
+                <stop stop-color="#6366f1"/>
+                <stop offset="1" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1>Modular API</h1>
+        <p>Panel d'administration</p>
+      </div>
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" name="password" placeholder="Entrez votre mot de passe" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          <span>Se connecter</span>
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clip-rule="evenodd"/></svg>
+        </button>
+        <div id="login-error" class="error-message hidden"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div id="dashboard" class="screen hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-small">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="8" fill="url(#grad2)"/>
+            <path d="M10 16L15 11V14H22V18H15V21L10 16Z" fill="white"/>
+            <defs>
+              <linearGradient id="grad2" x1="0" y1="0" x2="32" y2="32">
+                <stop stop-color="#6366f1"/>
+                <stop offset="1" stop-color="#8b5cf6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">Modular API</span>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-section="dashboard">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-section="routes">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          <span>Routes API</span>
+        </a>
+        <a href="#" class="nav-item" data-section="keys">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/></svg>
+          <span>Clés API</span>
+        </a>
+        <a href="#" class="nav-item" data-section="logs">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+          <span>Logs</span>
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <button id="settings-btn" class="nav-item">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+          <span>Paramètres</span>
+        </button>
+        <button id="logout-btn" class="nav-item logout">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
+          <span>Déconnexion</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Dashboard Section -->
+      <section id="section-dashboard" class="section active">
+        <div class="section-header">
+          <h2>Dashboard</h2>
+          <p>Vue d'ensemble de votre API</p>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon routes">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633z" clip-rule="evenodd"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-routes">0</span>
+              <span class="stat-label">Routes</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon keys">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-keys">0</span>
+              <span class="stat-label">Clés API</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon requests">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-requests">0</span>
+              <span class="stat-label">Requêtes (24h)</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon response">
+              <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+            </div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-response">0<small>ms</small></span>
+              <span class="stat-label">Temps moyen</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Requêtes récentes</h3>
+          </div>
+          <div class="card-body">
+            <div id="recent-logs" class="logs-list">
+              <p class="empty-state">Chargement...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Routes Section -->
+      <section id="section-routes" class="section">
+        <div class="section-header">
+          <h2>Routes API</h2>
+          <button class="btn btn-primary" id="btn-new-route">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            <span>Nouvelle route</span>
+          </button>
+        </div>
+        
+        <div id="routes-list" class="routes-grid">
+          <p class="empty-state">Chargement...</p>
+        </div>
+      </section>
+
+      <!-- Keys Section -->
+      <section id="section-keys" class="section">
+        <div class="section-header">
+          <h2>Clés API</h2>
+          <button class="btn btn-primary" id="btn-new-key">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+            <span>Nouvelle clé</span>
+          </button>
+        </div>
+        
+        <div id="keys-list" class="keys-grid">
+          <p class="empty-state">Chargement...</p>
+        </div>
+      </section>
+
+      <!-- Logs Section -->
+      <section id="section-logs" class="section">
+        <div class="section-header">
+          <h2>Logs des requêtes</h2>
+          <button class="btn btn-secondary" id="btn-clear-logs">
+            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            <span>Effacer les logs</span>
+          </button>
+        </div>
+        
+        <div id="all-logs" class="logs-table-container">
+          <p class="empty-state">Chargement...</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Route Modal -->
+  <div id="route-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h3 id="route-modal-title">Nouvelle route</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="route-form" class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="route-name">Nom</label>
+            <input type="text" id="route-name" name="name" placeholder="Ma route" required>
+          </div>
+          <div class="form-group">
+            <label for="route-method">Méthode</label>
+            <select id="route-method" name="method" required>
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="route-path">Chemin</label>
+          <div class="input-prefix">
+            <span>/api</span>
+            <input type="text" id="route-path" name="path" placeholder="/hello ou /users/:id" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="route-description">Description (optionnel)</label>
+          <input type="text" id="route-description" name="description" placeholder="Description de la route">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="route-language">Langage</label>
+            <select id="route-language" name="language" required>
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+              <option value="bash">Bash</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="route-auth">Authentification</label>
+            <select id="route-auth" name="authType">
+              <option value="none">Aucune (public)</option>
+              <option value="apikey">Clé API</option>
+              <option value="bearer">Bearer Token</option>
+              <option value="basic">Basic Auth</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <div class="label-with-button">
+            <label for="route-code">Code</label>
+            <button type="button" class="btn btn-sm btn-secondary" id="btn-open-ide">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+              Ouvrir l'IDE
+            </button>
+          </div>
+          <textarea id="route-code" name="code" class="code-editor" placeholder="// Votre code ici" rows="8" required></textarea>
+          <div class="code-help" id="code-help">
+            <strong>Variables:</strong> request, params, query, body, headers<br>
+            <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="route-ratelimit" name="rateLimitEnabled">
+            <span>Activer le rate limiting</span>
+          </label>
+        </div>
+        
+        <div id="ratelimit-config" class="ratelimit-config hidden">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="route-ratelimit-requests">Requêtes</label>
+              <input type="number" id="route-ratelimit-requests" name="rateLimitRequests" value="100" min="1">
+            </div>
+            <div class="form-group">
+              <label for="route-ratelimit-window">Par (secondes)</label>
+              <input type="number" id="route-ratelimit-window" name="rateLimitWindow" value="60" min="1">
+            </div>
+            <div class="form-group">
+              <label for="route-ratelimit-by">Limiter par</label>
+              <select id="route-ratelimit-by" name="rateLimitBy">
+                <option value="ip">IP</option>
+                <option value="apikey">Clé API</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="route-enabled" name="enabled" checked>
+            <span>Route activée</span>
+          </label>
+        </div>
+        
+        <input type="hidden" id="route-id" name="id">
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+        <button type="submit" form="route-form" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Modal -->
+  <div id="key-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="key-modal-title">Nouvelle clé API</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="key-form" class="modal-body">
+        <div class="form-group">
+          <label for="key-name">Nom</label>
+          <input type="text" id="key-name" name="name" placeholder="Production, Test, etc." required>
+        </div>
+        
+        <div class="form-group">
+          <label for="key-auth-method">Méthode d'authentification</label>
+          <select id="key-auth-method" name="authMethod">
+            <option value="header">Header X-API-Key</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="query">Query Parameter (?api_key=...)</option>
+          </select>
+          <div class="auth-method-help" id="auth-method-help">
+            <code>X-API-Key: votre_clé</code>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Permissions (routes autorisées)</label>
+          <div class="permissions-selector">
+            <label class="checkbox-label permission-all">
+              <input type="checkbox" id="key-permissions-all" checked>
+              <span>Toutes les routes</span>
+            </label>
+            <div id="routes-permissions-list" class="routes-permissions-list hidden">
+              <p class="empty-state">Chargement des routes...</p>
+            </div>
+          </div>
+          <input type="hidden" id="key-permissions" name="permissions" value="*">
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="key-quota" name="quotaEnabled">
+            <span>Activer les quotas</span>
+          </label>
+        </div>
+        
+        <div id="quota-config" class="quota-config hidden">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="key-quota-limit">Limite</label>
+              <input type="number" id="key-quota-limit" name="quotaLimit" value="10000" min="1">
+            </div>
+            <div class="form-group">
+              <label for="key-quota-period">Période</label>
+              <select id="key-quota-period" name="quotaPeriod">
+                <option value="day">Jour</option>
+                <option value="week">Semaine</option>
+                <option value="month" selected>Mois</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="key-enabled" name="enabled" checked>
+            <span>Clé activée</span>
+          </label>
+        </div>
+        
+        <input type="hidden" id="key-id" name="id">
+      </form>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+        <button type="submit" form="key-form" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- IDE Modal -->
+  <div id="ide-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content modal-fullscreen">
+      <div class="modal-header ide-header">
+        <div class="ide-title">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          <h3>Éditeur de code</h3>
+          <span class="ide-language" id="ide-language-badge">JavaScript</span>
+        </div>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="ide-body">
+        <div class="ide-editor-container">
+          <textarea id="ide-editor"></textarea>
+        </div>
+        <div class="ide-help" id="ide-help">
+          <strong>Variables:</strong> request, params, query, body, headers<br>
+          <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+        <button type="button" class="btn btn-primary" id="btn-apply-code">Appliquer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Paramètres</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-section">
+          <h4>Changer le mot de passe</h4>
+          <form id="password-form">
+            <div class="form-group">
+              <label for="current-password">Mot de passe actuel</label>
+              <input type="password" id="current-password" name="currentPassword" required>
+            </div>
+            <div class="form-group">
+              <label for="new-password">Nouveau mot de passe</label>
+              <input type="password" id="new-password" name="newPassword" minlength="8" required>
+            </div>
+            <div class="form-group">
+              <label for="confirm-new-password">Confirmer le nouveau mot de passe</label>
+              <input type="password" id="confirm-new-password" name="confirmNewPassword" minlength="8" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Changer le mot de passe</button>
+          </form>
+        </div>
+        
+        <div class="settings-section settings-danger">
+          <h4>Session</h4>
+          <p>Vous êtes connecté en tant qu'administrateur.</p>
+          <button id="logout-btn-modal" class="btn btn-danger">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/></svg>
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast-container"></div>
+
+  <!-- CodeMirror -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+

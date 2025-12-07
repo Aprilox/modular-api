@@ -1,0 +1,135 @@
+/**
+ * Routes d'authentification admin
+ */
+
+import bcrypt from 'bcryptjs';
+
+export default async function authRoutes(fastify, options) {
+  const prisma = fastify.prisma;
+
+  /**
+   * POST /auth/login - Connexion admin
+   */
+  fastify.post('/login', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['password'],
+        properties: {
+          password: { type: 'string' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { password } = request.body;
+    
+    // Récupérer la config
+    const config = await prisma.config.findUnique({ where: { id: 'main' } });
+    
+    if (!config) {
+      return reply.status(500).send({ 
+        error: 'Server Error', 
+        message: 'Application non configurée' 
+      });
+    }
+    
+    // Vérifier le mot de passe
+    const valid = await bcrypt.compare(password, config.adminHash);
+    
+    if (!valid) {
+      return reply.status(401).send({ 
+        error: 'Unauthorized', 
+        message: 'Mot de passe incorrect' 
+      });
+    }
+    
+    // Générer le JWT
+    const token = fastify.jwt.sign(
+      { admin: true },
+      { expiresIn: '24h' }
+    );
+    
+    // Définir le cookie
+    reply.setCookie('token', token, {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 // 24 heures
+    });
+    
+    return { 
+      success: true, 
+      message: 'Connexion réussie',
+      token 
+    };
+  });
+
+  /**
+   * POST /auth/logout - Déconnexion admin
+   */
+  fastify.post('/logout', async (request, reply) => {
+    reply.clearCookie('token', { path: '/' });
+    return { success: true, message: 'Déconnexion réussie' };
+  });
+
+  /**
+   * GET /auth/verify - Vérifier le token
+   */
+  fastify.get('/verify', async (request, reply) => {
+    try {
+      await request.jwtVerify();
+      return { valid: true, admin: true };
+    } catch (err) {
+      return reply.status(401).send({ valid: false });
+    }
+  });
+
+  /**
+   * POST /auth/change-password - Changer le mot de passe admin
+   */
+  fastify.post('/change-password', {
+    preHandler: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+    },
+    schema: {
+      body: {
+        type: 'object',
+        required: ['currentPassword', 'newPassword'],
+        properties: {
+          currentPassword: { type: 'string' },
+          newPassword: { type: 'string', minLength: 8 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { currentPassword, newPassword } = request.body;
+    
+    const config = await prisma.config.findUnique({ where: { id: 'main' } });
+    
+    // Vérifier l'ancien mot de passe
+    const valid = await bcrypt.compare(currentPassword, config.adminHash);
+    if (!valid) {
+      return reply.status(401).send({ 
+        error: 'Unauthorized', 
+        message: 'Mot de passe actuel incorrect' 
+      });
+    }
+    
+    // Hasher le nouveau mot de passe
+    const newHash = await bcrypt.hash(newPassword, 12);
+    
+    // Mettre à jour
+    await prisma.config.update({
+      where: { id: 'main' },
+      data: { adminHash: newHash }
+    });
+    
+    return { success: true, message: 'Mot de passe modifié avec succès' };
+  });
+}
+

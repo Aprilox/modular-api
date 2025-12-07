@@ -1,0 +1,110 @@
+// Prisma Schema - Modular API Platform
+// Supporte: SQLite, PostgreSQL, MySQL, MariaDB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Configuration globale de l'application
+model Config {
+  id        String   @id @default("main")
+  adminHash String   // Hash du mot de passe admin
+  jwtSecret String   // Secret pour les JWT
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Routes API dynamiques
+model ApiRoute {
+  id          String   @id @default(cuid())
+  path        String   // Ex: /demo, /users/:id
+  method      String   // GET, POST, PUT, DELETE, PATCH
+  name        String   // Nom descriptif de la route
+  description String?  // Description optionnelle
+  
+  // Code à exécuter
+  code        String   // Code source
+  language    String   // javascript, python, bash
+  
+  // Authentification
+  authType    String   @default("none") // none, apikey, bearer, basic
+  
+  // Rate limiting
+  rateLimitEnabled  Boolean @default(false)
+  rateLimitRequests Int     @default(100)  // Nombre de requêtes
+  rateLimitWindow   Int     @default(60)   // Fenêtre en secondes
+  rateLimitBy       String  @default("ip") // ip, apikey
+  
+  // État
+  enabled     Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  logs        RequestLog[]
+  
+  @@unique([path, method])
+}
+
+// Clés API
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String   // Nom descriptif
+  key         String   @unique // La clé elle-même
+  
+  // Permissions
+  permissions String   @default("*") // * pour tout, ou liste de route IDs séparés par virgule
+  
+  // Quotas
+  quotaEnabled  Boolean @default(false)
+  quotaLimit    Int     @default(10000) // Limite de requêtes
+  quotaPeriod   String  @default("month") // day, week, month
+  quotaUsed     Int     @default(0)
+  quotaResetAt  DateTime?
+  
+  // État
+  enabled     Boolean  @default(true)
+  expiresAt   DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  logs        RequestLog[]
+}
+
+// Logs des requêtes
+model RequestLog {
+  id          String   @id @default(cuid())
+  
+  // Requête
+  path        String
+  method      String
+  ip          String
+  userAgent   String?
+  
+  // Réponse
+  statusCode  Int
+  responseTime Int     // En millisecondes
+  
+  // Relations
+  routeId     String?
+  route       ApiRoute? @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  
+  apiKeyId    String?
+  apiKey      ApiKey?   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([routeId])
+  @@index([apiKeyId])
+  @@index([createdAt])
+  @@index([ip])
+}
+

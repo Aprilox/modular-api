@@ -8,6 +8,65 @@ export default async function authRoutes(fastify, options) {
   const prisma = fastify.prisma;
 
   /**
+   * GET /auth/status - Vérifier si l'application est configurée
+   */
+  fastify.get('/status', async (request, reply) => {
+    const config = await prisma.config.findUnique({ where: { id: 'main' } });
+    return { 
+      configured: !!config,
+      needsSetup: !config
+    };
+  });
+
+  /**
+   * POST /auth/setup - Configuration initiale (premier mot de passe)
+   */
+  fastify.post('/setup', {
+    schema: {
+      body: {
+        type: 'object',
+        required: ['password'],
+        properties: {
+          password: { type: 'string', minLength: 8 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    // Vérifier si déjà configuré
+    const existingConfig = await prisma.config.findUnique({ where: { id: 'main' } });
+    
+    if (existingConfig) {
+      return reply.status(400).send({ 
+        error: 'Already Configured', 
+        message: 'L\'application est déjà configurée' 
+      });
+    }
+    
+    const { password } = request.body;
+    
+    // Hasher le mot de passe
+    const adminHash = await bcrypt.hash(password, 12);
+    
+    // Générer un secret JWT
+    const crypto = await import('crypto');
+    const jwtSecret = crypto.randomBytes(64).toString('hex');
+    
+    // Créer la config
+    await prisma.config.create({
+      data: {
+        id: 'main',
+        adminHash,
+        jwtSecret
+      }
+    });
+    
+    return { 
+      success: true, 
+      message: 'Configuration initiale terminée ! Vous pouvez maintenant vous connecter.' 
+    };
+  });
+
+  /**
    * POST /auth/login - Connexion admin
    */
   fastify.post('/login', {

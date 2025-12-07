@@ -143,6 +143,20 @@ a:hover {
   font-size: 0.95rem;
 }
 
+.setup-info {
+  background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+  border-radius: var(--border-radius);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.setup-info p {
+  color: var(--gray-700);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;

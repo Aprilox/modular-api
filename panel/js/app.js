@@ -97,6 +97,18 @@ function updateCodeHelp(language) {
 // ============================================
 
 async function checkAuth() {
+  // D'abord vérifier si l'application est configurée
+  try {
+    const status = await fetch(`${API_URL}/auth/status`).then(r => r.json());
+    
+    if (status.needsSetup) {
+      showSetupScreen();
+      return false;
+    }
+  } catch (e) {
+    console.error('Erreur vérification status:', e);
+  }
+  
   if (!token) {
     showLoginScreen();
     return false;
@@ -114,12 +126,20 @@ async function checkAuth() {
   }
 }
 
+function showSetupScreen() {
+  document.getElementById('setup-screen').classList.remove('hidden');
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('dashboard').classList.add('hidden');
+}
+
 function showLoginScreen() {
+  document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('dashboard').classList.add('hidden');
 }
 
 function showDashboard() {
+  document.getElementById('setup-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
   loadDashboardData();
@@ -1254,6 +1274,48 @@ async function cleanUnusedDependencies() {
 document.addEventListener('DOMContentLoaded', () => {
   // Check auth on load
   checkAuth();
+  
+  // Setup form
+  document.getElementById('setup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('setup-password').value;
+    const passwordConfirm = document.getElementById('setup-password-confirm').value;
+    
+    const errorEl = document.getElementById('setup-error');
+    
+    if (password !== passwordConfirm) {
+      errorEl.textContent = 'Les mots de passe ne correspondent pas';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    
+    if (password.length < 8) {
+      errorEl.textContent = 'Le mot de passe doit contenir au moins 8 caractères';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showToast('Configuration terminée ! Connectez-vous maintenant.', 'success');
+        showLoginScreen();
+      } else {
+        errorEl.textContent = data.message || 'Erreur lors de la configuration';
+        errorEl.classList.remove('hidden');
+      }
+    } catch (err) {
+      errorEl.textContent = 'Erreur de connexion au serveur';
+      errorEl.classList.remove('hidden');
+    }
+  });
   
   // Login form
   document.getElementById('login-form').addEventListener('submit', (e) => {

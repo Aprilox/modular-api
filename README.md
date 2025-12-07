@@ -1,23 +1,37 @@
-# Modular API
+# 🛡️ Modular API
 
 <p align="center">
   <img src="https://img.shields.io/badge/node-%3E%3D18-brightgreen" alt="Node">
+  <img src="https://img.shields.io/badge/fastify-5.x-black" alt="Fastify">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
-  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome">
 </p>
 
-Plateforme API modulaire all-in-one. Créez des routes API dynamiques avec exécution de code multi-langages, authentification configurable et rate limiting.
+<p align="center">
+  <strong>Plateforme API modulaire all-in-one</strong><br>
+  Créez des routes API dynamiques avec exécution de code, authentification et rate limiting.
+</p>
+
+<p align="center">
+  <img src="docs/screenshot.png" alt="Panel Admin" width="800">
+</p>
+
+---
 
 ## ✨ Fonctionnalités
 
-- 🛣️ **Routes dynamiques** - Créez des endpoints à la volée via le panel web
-- 🌐 **Multi-langages** - JavaScript, Python, Bash (PowerShell sur Windows)
-- 🔐 **Authentification flexible** - Public, API Key, Bearer Token, Basic Auth
-- ⏱️ **Rate limiting** - Par IP ou par clé API, configurable par route
-- 🔑 **Gestion des clés API** - Permissions granulaires et quotas
-- 📊 **Logs & Analytics** - Suivi des requêtes en temps réel
-- 🗄️ **Multi-database** - SQLite, PostgreSQL, MySQL, MariaDB
-- 🎨 **Panel moderne** - Interface web avec éditeur de code intégré
+| Fonctionnalité | Description |
+|----------------|-------------|
+| 🛣️ **Routes dynamiques** | Créez des endpoints API à la volée via le panel |
+| 💻 **Multi-langages** | JavaScript (Node.js) et Python |
+| 🔐 **Authentification** | Public, API Key, Bearer Token, Header personnalisé |
+| ⏱️ **Rate limiting** | Par IP ou par clé API, configurable par route |
+| 🔑 **Gestion des clés API** | Permissions par route, compteur de requêtes |
+| 📦 **Dépendances** | Installation et gestion des packages npm/pip |
+| 📊 **Logs détaillés** | Historique des requêtes avec erreurs |
+| 🗄️ **Multi-database** | SQLite, PostgreSQL, MySQL, MariaDB |
+| 🎨 **IDE intégré** | Éditeur de code avec coloration syntaxique |
+
+---
 
 ## 🚀 Installation
 
@@ -27,119 +41,168 @@ git clone https://github.com/Aprilox/modular-api.git
 cd modular-api
 
 # Installer les dépendances
-npm install
+pnpm install
 
 # Configurer l'environnement
 cp env.example .env
 
 # Initialiser la base de données
-npm run db:push
-
-# Configurer le mot de passe admin
-npm run setup
+pnpm run db:push
 
 # Démarrer le serveur
-npm start
+pnpm start
 ```
 
-Le serveur démarre sur **http://localhost:3000**
+Au premier lancement, accédez à **http://localhost:3000/panel/** pour configurer le mot de passe admin.
 
-## 📖 Utilisation rapide
+---
 
-### 1. Accéder au panel
+## 📖 Utilisation
 
-Ouvrez **http://localhost:3000/panel/** et connectez-vous.
+### 1. Configuration initiale
 
-### 2. Créer une route
+Ouvrez **http://localhost:3000/panel/** et créez votre mot de passe admin.
+
+### 2. Créer une route API
+
+Dans le panel, créez une nouvelle route :
+
+- **Path** : `/hello`
+- **Méthode** : `GET`
+- **Langage** : `JavaScript`
 
 ```javascript
-// Route: GET /hello
-// Langage: JavaScript
-
 const name = query.name || 'World';
-json({ message: `Hello ${name}!` });
+json({ 
+  message: `Hello ${name}!`,
+  timestamp: new Date().toISOString()
+});
 ```
 
 ### 3. Tester
 
 ```bash
 curl http://localhost:3000/api/hello?name=Dev
-# {"message":"Hello Dev!"}
+# {"message":"Hello Dev!","timestamp":"2025-12-07T..."}
 ```
+
+---
 
 ## 💻 Exemples de code
 
-### JavaScript
+### JavaScript (Node.js)
+
 ```javascript
-json({ 
-  message: "Hello!",
-  params: params,
-  query: query 
+// Variables disponibles: request, params, query, body, headers
+// Fonctions: json(data, status), respond(data, status, headers)
+
+const axios = require('axios');
+
+const response = await axios.get('https://api.example.com/data');
+json({
+  success: true,
+  data: response.data
 });
 ```
 
 ### Python
+
 ```python
+# Variables disponibles: request, params, query, body, headers
+# Fonctions: json_response(data, status), respond(data, status, headers)
+
 import random
+from datetime import datetime
+
 json_response({
-    'number': random.randint(1, 100)
+    'number': random.randint(1, 100),
+    'generated_at': datetime.now().isoformat()
 })
 ```
 
+---
+
 ## ⚙️ Configuration
+
+### Variables d'environnement
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
-| `DATABASE_URL` | URL de la base de données | `file:./data.db` |
+| `DATABASE_URL` | URL de connexion BDD | `file:./data.db` |
 | `PORT` | Port du serveur | `3000` |
 | `CODE_TIMEOUT` | Timeout d'exécution (ms) | `5000` |
+| `ENABLE_JAVASCRIPT` | Activer JavaScript | `true` |
+| `ENABLE_PYTHON` | Activer Python | `true` |
 
-### Bases de données supportées
+### Bases de données
 
 ```env
-# SQLite (défaut)
+# SQLite (défaut - recommandé pour démarrer)
 DATABASE_URL="file:./data.db"
 
 # PostgreSQL
-DATABASE_URL="postgresql://user:pass@localhost:5432/db"
+DATABASE_URL="postgresql://user:password@localhost:5432/modular_api"
 
 # MySQL / MariaDB
-DATABASE_URL="mysql://user:pass@localhost:3306/db"
+DATABASE_URL="mysql://user:password@localhost:3306/modular_api"
 ```
 
-## 📁 Structure
+---
+
+## 📁 Structure du projet
 
 ```
 modular-api/
 ├── src/
-│   ├── server.js          # Serveur Fastify
-│   ├── setup.js           # Configuration initiale
-│   ├── routes/            # Routes API
-│   ├── services/          # Logique métier
-│   └── middleware/        # Middlewares
-├── panel/                 # Interface web
-├── prisma/                # Schéma BDD
+│   ├── server.js           # Serveur Fastify principal
+│   ├── routes/
+│   │   ├── api.js          # Routes API dynamiques
+│   │   ├── admin.js        # API d'administration
+│   │   └── auth.js         # Authentification
+│   ├── services/
+│   │   ├── codeRunner.js   # Exécution de code
+│   │   └── dependencyManager.js
+│   └── middleware/
+│       └── auth.js         # Middleware d'authentification
+├── panel/                  # Interface web admin
+│   ├── index.html
+│   ├── css/style.css
+│   └── js/app.js
+├── prisma/
+│   └── schema.prisma       # Schéma de base de données
 └── env.example
 ```
 
+---
+
 ## 🔒 Sécurité
 
-- Mot de passe admin hashé (bcrypt)
-- JWT avec expiration 24h
-- Exécution de code sandboxée avec timeout
-- Rate limiting intégré
+- ✅ Mot de passe admin hashé (bcrypt)
+- ✅ JWT avec expiration 24h
+- ✅ Exécution de code sandboxée avec timeout
+- ✅ Rate limiting configurable
+- ✅ Headers de sécurité HTTP
+- ✅ Protection CSRF sur les formulaires
 
-## 📝 Scripts
+---
+
+## 📝 Commandes
 
 | Commande | Description |
 |----------|-------------|
-| `npm start` | Démarrer le serveur |
-| `npm run dev` | Mode développement |
-| `npm run setup` | Configurer l'admin |
-| `npm run db:push` | Sync base de données |
-| `npm run db:studio` | Interface Prisma |
+| `pnpm start` | Démarrer le serveur |
+| `pnpm run dev` | Mode développement (hot reload) |
+| `pnpm run db:push` | Synchroniser le schéma BDD |
+| `pnpm run db:studio` | Interface Prisma Studio |
+
+---
+
+## 🤝 Contribution
+
+Les PRs sont les bienvenues ! N'hésitez pas à ouvrir une issue pour discuter des changements.
+
+---
 
 ## 📄 Licence
 
-MIT
-
+MIT © [Aprilox](https://github.com/Aprilox)

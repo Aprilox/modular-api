@@ -350,7 +350,7 @@ function showLogDetailFromRecent(logId) {
   document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
   document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
   document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
-  document.getElementById('log-detail-apikey').textContent = log.apiKey?.name || '-';
+  document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? '<span style="color: var(--success);">Oui</span>' : '<span style="color: var(--gray-400);">Non</span>';
   
   // Format headers JSON
   try {
@@ -880,7 +880,7 @@ function showLogDetail(logId) {
   document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
   document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
   document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
-  document.getElementById('log-detail-apikey').textContent = log.apiKey?.name || '-';
+  document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? '<span style="color: var(--success);">Oui</span>' : '<span style="color: var(--gray-400);">Non</span>';
   
   // Format headers JSON
   try {

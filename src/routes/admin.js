@@ -494,8 +494,8 @@ export default async function adminRoutes(fastify, options) {
     // Récupérer toutes les routes
     const routes = await prisma.apiRoute.findMany();
     
-    // Récupérer toutes les dépendances
-    const dependencies = await prisma.dependency.findMany();
+    // Récupérer toutes les dépendances (frais de la DB)
+    let dependencies = await prisma.dependency.findMany();
     
     // Réinitialiser tous les usedBy
     for (const dep of dependencies) {
@@ -503,14 +503,23 @@ export default async function adminRoutes(fastify, options) {
         where: { id: dep.id },
         data: { usedBy: '' }
       });
+      dep.usedBy = '';
     }
+    
+    // Normaliser le langage
+    const normalizeLanguage = (lang) => {
+      if (lang === 'js' || lang === 'javascript') return 'javascript';
+      if (lang === 'py' || lang === 'python') return 'python';
+      return lang;
+    };
     
     // Analyser chaque route et mettre à jour usedBy
     for (const route of routes) {
       const { packages } = detectDependencies(route.code, route.language);
+      const routeLang = normalizeLanguage(route.language);
       
       for (const pkg of packages) {
-        const dep = dependencies.find(d => d.name === pkg && d.language === (route.language === 'js' ? 'javascript' : route.language));
+        const dep = dependencies.find(d => d.name === pkg && normalizeLanguage(d.language) === routeLang);
         if (dep) {
           const currentUsedBy = dep.usedBy ? dep.usedBy.split(',').filter(Boolean) : [];
           if (!currentUsedBy.includes(route.id)) {

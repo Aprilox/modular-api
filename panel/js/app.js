@@ -1089,12 +1089,17 @@ async function quickInstallDep(name, language, btn) {
       body: JSON.stringify({ name, language })
     });
     
-    showToast(`${name} installé avec succès`, 'success');
+    showToast(`${name} installé avec succès ! Mise à jour...`, 'success');
     
     // Mettre à jour les usedBy en analysant toutes les routes
     await updateDependencyUsage();
     
-    loadDependencies();
+    // Recharger les dépendances depuis le serveur
+    const data = await api('/admin/dependencies');
+    dependencies = data.dependencies;
+    
+    // Re-render
+    await renderDependencies();
   } catch (e) {
     showToast(`Erreur: ${e.message}`, 'error');
     if (btn) {
@@ -1106,9 +1111,11 @@ async function quickInstallDep(name, language, btn) {
 
 async function updateDependencyUsage() {
   try {
-    await api('/admin/dependencies/update-usage', { method: 'POST' });
+    const result = await api('/admin/dependencies/update-usage', { method: 'POST' });
+    return result;
   } catch (e) {
     console.error('Erreur mise à jour usage:', e);
+    throw e;
   }
 }
 

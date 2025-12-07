@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Panel Admin" width="800">
+  <img src=".github/assets/home.png" alt="Panel Admin" width="800">
 </p>
 
 ---

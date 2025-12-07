@@ -156,6 +156,8 @@ export default async function adminRoutes(fastify, options) {
         id: true,
         name: true,
         key: true,
+        authMethod: true,
+        customHeader: true,
         permissions: true,
         quotaEnabled: true,
         quotaLimit: true,
@@ -181,6 +183,8 @@ export default async function adminRoutes(fastify, options) {
         required: ['name'],
         properties: {
           name: { type: 'string' },
+          authMethod: { type: 'string', enum: ['header', 'bearer', 'query', 'custom'], default: 'header' },
+          customHeader: { type: 'string' },
           permissions: { type: 'string', default: '*' },
           quotaEnabled: { type: 'boolean', default: false },
           quotaLimit: { type: 'integer', default: 10000 },

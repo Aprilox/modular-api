@@ -40,18 +40,17 @@ async function checkSetup() {
   try {
     const config = await prisma.config.findUnique({ where: { id: 'main' } });
     if (!config) {
-      console.log('\n╔════════════════════════════════════════════╗');
-      console.log('║  ⚠️  Application non configurée!           ║');
-      console.log('║  Lancez: npm run setup                     ║');
-      console.log('╚════════════════════════════════════════════╝\n');
-      process.exit(1);
+      console.log('\n╔════════════════════════════════════════════════════╗');
+      console.log('║  ℹ️  Première utilisation détectée!                ║');
+      console.log('║  Accédez au panel pour configurer le mot de passe  ║');
+      console.log('╚════════════════════════════════════════════════════╝\n');
+      return null; // Retourner null au lieu de quitter
     }
     return config;
   } catch (e) {
     console.log('\n╔════════════════════════════════════════════╗');
     console.log('║  ⚠️  Base de données non initialisée!      ║');
     console.log('║  Lancez: npm run db:push                   ║');
-    console.log('║  Puis:   npm run setup                     ║');
     console.log('╚════════════════════════════════════════════╝\n');
     process.exit(1);
   }
@@ -77,13 +76,24 @@ async function start() {
   // Cookies
   await fastify.register(fastifyCookie);
 
-  // JWT
+  // JWT - utiliser un secret temporaire si pas encore configuré
+  const jwtSecret = config?.jwtSecret || process.env.JWT_TEMP_SECRET || 'temp-secret-change-after-setup';
   await fastify.register(fastifyJwt, {
-    secret: config.jwtSecret,
+    secret: jwtSecret,
     cookie: {
       cookieName: 'token',
       signed: false
     }
+  });
+  
+  // Headers de sécurité
+  fastify.addHook('onSend', async (request, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('X-XSS-Protection', '1; mode=block');
+    reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    reply.header('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    reply.header('Pragma', 'no-cache');
   });
 
   // Fichiers statiques (panel admin)

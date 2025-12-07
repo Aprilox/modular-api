@@ -5,6 +5,13 @@
 // API Base URL
 const API_URL = window.location.origin;
 
+// Nettoyer l'URL de tout paramètre sensible au chargement
+(function cleanURL() {
+  if (window.location.search || window.location.hash) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+})();
+
 // State
 let token = localStorage.getItem('token');
 let currentSection = 'dashboard';
@@ -156,9 +163,16 @@ async function login(password) {
     
     token = data.token;
     localStorage.setItem('token', token);
+    
+    // Nettoyer le champ mot de passe
+    document.getElementById('password').value = '';
+    document.getElementById('login-error').classList.add('hidden');
+    
     showDashboard();
     showToast('Connexion réussie', 'success');
   } catch (e) {
+    // Nettoyer le champ mot de passe en cas d'erreur aussi
+    document.getElementById('password').value = '';
     document.getElementById('login-error').textContent = e.message;
     document.getElementById('login-error').classList.remove('hidden');
   }

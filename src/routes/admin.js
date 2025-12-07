@@ -484,5 +484,49 @@ export default async function adminRoutes(fastify, options) {
     
     return { success: true, removed };
   });
+
+  /**
+   * POST /admin/dependencies/update-usage - Mettre à jour l'usage des dépendances
+   */
+  fastify.post('/dependencies/update-usage', async (request, reply) => {
+    const { detectDependencies } = await import('../services/dependencyManager.js');
+    
+    // Récupérer toutes les routes
+    const routes = await prisma.apiRoute.findMany();
+    
+    // Récupérer toutes les dépendances
+    const dependencies = await prisma.dependency.findMany();
+    
+    // Réinitialiser tous les usedBy
+    for (const dep of dependencies) {
+      await prisma.dependency.update({
+        where: { id: dep.id },
+        data: { usedBy: '' }
+      });
+    }
+    
+    // Analyser chaque route et mettre à jour usedBy
+    for (const route of routes) {
+      const { packages } = detectDependencies(route.code, route.language);
+      
+      for (const pkg of packages) {
+        const dep = dependencies.find(d => d.name === pkg && d.language === (route.language === 'js' ? 'javascript' : route.language));
+        if (dep) {
+          const currentUsedBy = dep.usedBy ? dep.usedBy.split(',').filter(Boolean) : [];
+          if (!currentUsedBy.includes(route.id)) {
+            currentUsedBy.push(route.id);
+            await prisma.dependency.update({
+              where: { id: dep.id },
+              data: { usedBy: currentUsedBy.join(',') }
+            });
+            // Mettre à jour en mémoire aussi pour les prochaines itérations
+            dep.usedBy = currentUsedBy.join(',');
+          }
+        }
+      }
+    }
+    
+    return { success: true };
+  });
 }
 

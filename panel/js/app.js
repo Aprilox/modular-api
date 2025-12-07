@@ -520,6 +520,9 @@ async function saveRoute(formData) {
     
     document.getElementById('route-modal').classList.add('hidden');
     loadRoutes();
+    
+    // Mettre à jour les dépendances après sauvegarde d'une route
+    checkMissingDependencies();
   } catch (e) {
     showToast(e.message, 'error');
   }
@@ -1022,7 +1025,7 @@ async function renderDependencies() {
               </div>
             </div>
             <div class="dep-card-footer">
-              <button class="btn btn-sm btn-primary" onclick="quickInstallDep('${m.name}', '${m.language}')">
+              <button class="btn btn-sm btn-primary" onclick="quickInstallDep('${m.name}', '${m.language}', this)">
                 <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                 Installer
               </button>
@@ -1071,7 +1074,13 @@ async function renderDependencies() {
   container.innerHTML = html;
 }
 
-async function quickInstallDep(name, language) {
+async function quickInstallDep(name, language, btn) {
+  // Afficher le loading sur le bouton
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner"></span> Installation...`;
+  }
+  
   showToast(`Installation de ${name}...`, 'info');
   
   try {
@@ -1081,9 +1090,25 @@ async function quickInstallDep(name, language) {
     });
     
     showToast(`${name} installé avec succès`, 'success');
+    
+    // Mettre à jour les usedBy en analysant toutes les routes
+    await updateDependencyUsage();
+    
     loadDependencies();
   } catch (e) {
     showToast(`Erreur: ${e.message}`, 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg> Installer`;
+    }
+  }
+}
+
+async function updateDependencyUsage() {
+  try {
+    await api('/admin/dependencies/update-usage', { method: 'POST' });
+  } catch (e) {
+    console.error('Erreur mise à jour usage:', e);
   }
 }
 

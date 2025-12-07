@@ -1158,6 +1158,12 @@ async function installDependency(formData) {
     return;
   }
   
+  // Récupérer le bouton submit et afficher le loading
+  const btn = document.querySelector('#dep-form button[type="submit"]');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Installation...`;
+  
   showToast(`Installation de ${name}...`, 'info');
   
   try {
@@ -1166,11 +1172,24 @@ async function installDependency(formData) {
       body: JSON.stringify({ name, language })
     });
     
-    showToast(`${name} installé avec succès`, 'success');
+    showToast(`${name} installé ! Mise à jour des liens...`, 'success');
+    
+    // Mettre à jour les usedBy en analysant toutes les routes
+    await updateDependencyUsage();
+    
     document.getElementById('dep-modal').classList.add('hidden');
-    loadDependencies();
+    
+    // Recharger les dépendances depuis le serveur
+    const data = await api('/admin/dependencies');
+    dependencies = data.dependencies;
+    await renderDependencies();
+    
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
   } catch (e) {
     showToast(`Erreur: ${e.message}`, 'error');
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
   }
 }
 

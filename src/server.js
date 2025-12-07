@@ -119,11 +119,6 @@ async function start() {
     return reply.redirect('/panel/');
   });
 
-  // Health check
-  fastify.get('/health', async () => {
-    return { status: 'ok', timestamp: new Date().toISOString() };
-  });
-
   // Gestion de la fermeture
   const gracefulShutdown = async () => {
     console.log('\n🛑 Arrêt du serveur...');
@@ -145,8 +140,7 @@ async function start() {
     console.log('║     🚀 MODULAR API - Serveur démarré       ║');
     console.log('╚════════════════════════════════════════════╝');
     console.log(`\n📡 API:   http://localhost:${port}/api`);
-    console.log(`🎛️  Panel: http://localhost:${port}/panel/`);
-    console.log(`❤️  Health: http://localhost:${port}/health\n`);
+    console.log(`🎛️  Panel: http://localhost:${port}/panel/\n`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

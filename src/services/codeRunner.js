@@ -73,7 +73,8 @@ async function runJavaScript(code, context, timeout = DEFAULT_TIMEOUT) {
       })();
     `;
     
-    const tempFile = join(tempDir, `js_${randomBytes(8).toString('hex')}.js`);
+    // Utiliser .cjs pour forcer CommonJS et permettre require()
+    const tempFile = join(tempDir, `js_${randomBytes(8).toString('hex')}.cjs`);
     writeFileSync(tempFile, wrappedCode);
     
     const child = spawn('node', [tempFile], {

@@ -76,7 +76,7 @@ export default async function apiRoutes(fastify, options) {
       if (!rateLimitResult.allowed) {
         reply.header('Retry-After', rateLimitResult.retryAfter);
         
-        await logRequest(prisma, request, route, 429, Date.now() - startTime);
+        await logRequest(prisma, request, route, 429, Date.now() - startTime, 'Rate limit exceeded');
         
         return reply.status(429).send({
           error: 'Too Many Requests',
@@ -107,8 +107,18 @@ export default async function apiRoutes(fastify, options) {
     
     const responseTime = Date.now() - startTime;
     
+    // Extraire le message d'erreur si présent
+    let errorMessage = null;
+    if (result.status >= 400 && result.body) {
+      if (typeof result.body === 'object' && result.body.error) {
+        errorMessage = result.body.error;
+      } else if (typeof result.body === 'string') {
+        errorMessage = result.body;
+      }
+    }
+    
     // Logger la requête
-    await logRequest(prisma, request, route, result.status, responseTime);
+    await logRequest(prisma, request, route, result.status, responseTime, errorMessage);
     
     // Appliquer les headers de la réponse
     if (result.headers) {
@@ -195,7 +205,7 @@ function extractParams(pattern, path) {
 /**
  * Enregistre une requête dans les logs
  */
-async function logRequest(prisma, request, route, statusCode, responseTime) {
+async function logRequest(prisma, request, route, statusCode, responseTime, errorMessage = null) {
   try {
     // Tronquer les données pour éviter les logs trop gros
     const truncate = (str, max = 2000) => {
@@ -220,6 +230,7 @@ async function logRequest(prisma, request, route, statusCode, responseTime) {
         requestBody: truncate(request.body),
         statusCode,
         responseTime,
+        errorMessage: truncate(errorMessage, 500),
         routeId: route?.id,
         apiKeyId: request.apiKey?.id
       }

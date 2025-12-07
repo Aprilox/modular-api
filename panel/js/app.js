@@ -353,6 +353,16 @@ function showLogDetailFromRecent(logId) {
   document.getElementById('log-detail-date').textContent = formatDate(log.createdAt);
   
   document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
+  
+  // Afficher l'erreur si présente
+  const errorRow = document.getElementById('log-detail-error-row');
+  if (log.errorMessage) {
+    errorRow.style.display = 'flex';
+    document.getElementById('log-detail-error').textContent = log.errorMessage;
+  } else {
+    errorRow.style.display = 'none';
+  }
+  
   document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
   document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
   document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? '<span style="color: var(--success);">Oui</span>' : '<span style="color: var(--gray-400);">Non</span>';
@@ -854,6 +864,7 @@ function renderLogsTable(logs) {
           <th>Méthode</th>
           <th>Path</th>
           <th>Status</th>
+          <th>Erreur</th>
           <th>Temps</th>
           <th>IP</th>
         </tr>
@@ -865,6 +876,7 @@ function renderLogsTable(logs) {
             <td><span class="method-badge ${log.method.toLowerCase()}">${log.method}</span></td>
             <td style="font-family: monospace; font-size: 0.85rem;">${log.path}</td>
             <td><span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}">${log.statusCode}</span></td>
+            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--danger); font-size: 0.8rem;" title="${log.errorMessage || ''}">${log.errorMessage || '-'}</td>
             <td>${log.responseTime}ms</td>
             <td>${log.ip}</td>
           </tr>
@@ -886,6 +898,16 @@ function showLogDetail(logId) {
   document.getElementById('log-detail-date').textContent = formatDate(log.createdAt);
   
   document.getElementById('log-detail-status').innerHTML = `<span style="color: ${log.statusCode < 400 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">${log.statusCode}</span>`;
+  
+  // Afficher l'erreur si présente
+  const errorRow = document.getElementById('log-detail-error-row');
+  if (log.errorMessage) {
+    errorRow.style.display = 'flex';
+    document.getElementById('log-detail-error').textContent = log.errorMessage;
+  } else {
+    errorRow.style.display = 'none';
+  }
+  
   document.getElementById('log-detail-time').textContent = `${log.responseTime}ms`;
   document.getElementById('log-detail-route').textContent = log.route ? `${log.route.name} (${log.route.path})` : '-';
   document.getElementById('log-detail-apikey').innerHTML = log.apiKey ? '<span style="color: var(--success);">Oui</span>' : '<span style="color: var(--gray-400);">Non</span>';

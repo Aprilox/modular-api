@@ -101,6 +101,7 @@ model RequestLog {
   // Réponse
   statusCode  Int
   responseTime Int     // En millisecondes
+  errorMessage String? // Message d'erreur si statusCode >= 400
   
   // Relations
   routeId     String?

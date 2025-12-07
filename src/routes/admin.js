@@ -296,6 +296,7 @@ export default async function adminRoutes(fastify, options) {
           requestBody: true,
           statusCode: true,
           responseTime: true,
+          errorMessage: true,
           createdAt: true,
           route: { select: { name: true, path: true } },
           apiKey: { select: { name: true } }
@@ -351,6 +352,7 @@ export default async function adminRoutes(fastify, options) {
           requestBody: true,
           statusCode: true,
           responseTime: true,
+          errorMessage: true,
           createdAt: true,
           route: { select: { name: true, path: true } },
           apiKey: { select: { name: true } }

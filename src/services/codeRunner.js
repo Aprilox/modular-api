@@ -332,24 +332,343 @@ async function runBash(code, context, timeout = DEFAULT_TIMEOUT) {
 }
 
 /**
+ * Exécute du code Ruby
+ */
+async function runRuby(code, context, timeout = DEFAULT_TIMEOUT) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const wrappedCode = `
+require 'json'
+
+context = JSON.parse('${JSON.stringify(context).replace(/'/g, "\\'")}')
+request = context['request'] || {}
+params = context['params'] || {}
+query = context['query'] || {}
+body = context['body'] || {}
+headers = context['headers'] || {}
+
+$__response = { 'status' => 200, 'body' => nil, 'headers' => {} }
+
+def respond(data, status = 200, headers = {})
+  $__response = { 'status' => status, 'body' => data, 'headers' => headers }
+end
+
+def json(data, status = 200)
+  respond(data, status, { 'Content-Type' => 'application/json' })
+end
+
+begin
+${code.split('\n').map(line => '  ' + line).join('\n')}
+rescue => e
+  $__response = { 'status' => 500, 'body' => { 'error' => e.message }, 'headers' => {} }
+end
+
+puts '__RESULT__' + JSON.generate($__response)
+`;
+    
+    const tempFile = join(tempDir, `rb_${randomBytes(8).toString('hex')}.rb`);
+    writeFileSync(tempFile, wrappedCode);
+    
+    const child = spawn('ruby', [tempFile], { timeout });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+    
+    child.on('close', (code) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      const executionTime = Date.now() - startTime;
+      const resultMatch = stdout.match(/__RESULT__(.+)$/m);
+      
+      if (resultMatch) {
+        try {
+          const result = JSON.parse(resultMatch[1]);
+          resolve({ success: true, ...result, executionTime });
+        } catch (e) {
+          resolve({ success: false, status: 500, body: { error: 'Parse error' }, executionTime });
+        }
+      } else if (stderr) {
+        resolve({ success: false, status: 500, body: { error: stderr.trim() }, executionTime });
+      } else {
+        resolve({ success: true, status: 200, body: stdout.trim() || null, executionTime });
+      }
+    });
+    
+    child.on('error', (error) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      resolve({ success: false, status: 500, body: { error: `Ruby non disponible: ${error.message}` }, executionTime: Date.now() - startTime });
+    });
+    
+    setTimeout(() => { child.kill('SIGTERM'); }, timeout);
+  });
+}
+
+/**
+ * Exécute du code PHP
+ */
+async function runPHP(code, context, timeout = DEFAULT_TIMEOUT) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const wrappedCode = `<?php
+$context = json_decode('${JSON.stringify(context).replace(/'/g, "\\'")}', true);
+$request = $context['request'] ?? [];
+$params = $context['params'] ?? [];
+$query = $context['query'] ?? [];
+$body = $context['body'] ?? [];
+$headers = $context['headers'] ?? [];
+
+$__response = ['status' => 200, 'body' => null, 'headers' => []];
+
+function respond($data, $status = 200, $headers = []) {
+    global $__response;
+    $__response = ['status' => $status, 'body' => $data, 'headers' => $headers];
+}
+
+function json($data, $status = 200) {
+    respond($data, $status, ['Content-Type' => 'application/json']);
+}
+
+try {
+${code}
+} catch (Exception $e) {
+    $__response = ['status' => 500, 'body' => ['error' => $e->getMessage()], 'headers' => []];
+}
+
+echo '__RESULT__' . json_encode($__response);
+?>`;
+    
+    const tempFile = join(tempDir, `php_${randomBytes(8).toString('hex')}.php`);
+    writeFileSync(tempFile, wrappedCode);
+    
+    const child = spawn('php', [tempFile], { timeout });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+    
+    child.on('close', (code) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      const executionTime = Date.now() - startTime;
+      const resultMatch = stdout.match(/__RESULT__(.+)$/m);
+      
+      if (resultMatch) {
+        try {
+          const result = JSON.parse(resultMatch[1]);
+          resolve({ success: true, ...result, executionTime });
+        } catch (e) {
+          resolve({ success: false, status: 500, body: { error: 'Parse error' }, executionTime });
+        }
+      } else if (stderr) {
+        resolve({ success: false, status: 500, body: { error: stderr.trim() }, executionTime });
+      } else {
+        resolve({ success: true, status: 200, body: stdout.trim() || null, executionTime });
+      }
+    });
+    
+    child.on('error', (error) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      resolve({ success: false, status: 500, body: { error: `PHP non disponible: ${error.message}` }, executionTime: Date.now() - startTime });
+    });
+    
+    setTimeout(() => { child.kill('SIGTERM'); }, timeout);
+  });
+}
+
+/**
+ * Exécute du code Go
+ */
+async function runGo(code, context, timeout = DEFAULT_TIMEOUT) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const wrappedCode = `package main
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+var request map[string]interface{}
+var params map[string]interface{}
+var query map[string]interface{}
+var body map[string]interface{}
+var headers map[string]interface{}
+var __response = map[string]interface{}{"status": 200, "body": nil, "headers": map[string]interface{}{}}
+
+func respond(data interface{}, status int, headers map[string]interface{}) {
+	__response = map[string]interface{}{"status": status, "body": data, "headers": headers}
+}
+
+func jsonResp(data interface{}, status int) {
+	respond(data, status, map[string]interface{}{"Content-Type": "application/json"})
+}
+
+func main() {
+	var context map[string]interface{}
+	json.Unmarshal([]byte(\`${JSON.stringify(context).replace(/`/g, '\\`')}\`), &context)
+	
+	if r, ok := context["request"].(map[string]interface{}); ok { request = r }
+	if p, ok := context["params"].(map[string]interface{}); ok { params = p }
+	if q, ok := context["query"].(map[string]interface{}); ok { query = q }
+	if b, ok := context["body"].(map[string]interface{}); ok { body = b }
+	if h, ok := context["headers"].(map[string]interface{}); ok { headers = h }
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				__response = map[string]interface{}{"status": 500, "body": map[string]interface{}{"error": fmt.Sprintf("%v", r)}, "headers": map[string]interface{}{}}
+			}
+		}()
+${code.split('\n').map(line => '\t\t' + line).join('\n')}
+	}()
+
+	result, _ := json.Marshal(__response)
+	fmt.Print("__RESULT__" + string(result))
+}`;
+    
+    const tempFile = join(tempDir, `go_${randomBytes(8).toString('hex')}.go`);
+    writeFileSync(tempFile, wrappedCode);
+    
+    const child = spawn('go', ['run', tempFile], { timeout });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+    
+    child.on('close', (code) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      const executionTime = Date.now() - startTime;
+      const resultMatch = stdout.match(/__RESULT__(.+)$/m);
+      
+      if (resultMatch) {
+        try {
+          const result = JSON.parse(resultMatch[1]);
+          resolve({ success: true, ...result, executionTime });
+        } catch (e) {
+          resolve({ success: false, status: 500, body: { error: 'Parse error' }, executionTime });
+        }
+      } else if (stderr) {
+        resolve({ success: false, status: 500, body: { error: stderr.trim() }, executionTime });
+      } else {
+        resolve({ success: true, status: 200, body: stdout.trim() || null, executionTime });
+      }
+    });
+    
+    child.on('error', (error) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      resolve({ success: false, status: 500, body: { error: `Go non disponible: ${error.message}` }, executionTime: Date.now() - startTime });
+    });
+    
+    setTimeout(() => { child.kill('SIGTERM'); }, timeout);
+  });
+}
+
+/**
+ * Exécute du code Perl
+ */
+async function runPerl(code, context, timeout = DEFAULT_TIMEOUT) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const wrappedCode = `
+use JSON;
+use strict;
+use warnings;
+
+my $context = decode_json('${JSON.stringify(context).replace(/'/g, "\\'")}');
+my $request = $context->{request} // {};
+my $params = $context->{params} // {};
+my $query = $context->{query} // {};
+my $body = $context->{body} // {};
+my $headers = $context->{headers} // {};
+
+our $__response = { status => 200, body => undef, headers => {} };
+
+sub respond {
+    my ($data, $status, $headers) = @_;
+    $status //= 200;
+    $headers //= {};
+    $__response = { status => $status, body => $data, headers => $headers };
+}
+
+sub json_resp {
+    my ($data, $status) = @_;
+    $status //= 200;
+    respond($data, $status, { 'Content-Type' => 'application/json' });
+}
+
+eval {
+${code}
+};
+if ($@) {
+    $__response = { status => 500, body => { error => $@ }, headers => {} };
+}
+
+print '__RESULT__' . encode_json($__response);
+`;
+    
+    const tempFile = join(tempDir, `pl_${randomBytes(8).toString('hex')}.pl`);
+    writeFileSync(tempFile, wrappedCode);
+    
+    const child = spawn('perl', [tempFile], { timeout });
+    
+    let stdout = '';
+    let stderr = '';
+    
+    child.stdout.on('data', (data) => { stdout += data.toString(); });
+    child.stderr.on('data', (data) => { stderr += data.toString(); });
+    
+    child.on('close', (code) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      const executionTime = Date.now() - startTime;
+      const resultMatch = stdout.match(/__RESULT__(.+)$/m);
+      
+      if (resultMatch) {
+        try {
+          const result = JSON.parse(resultMatch[1]);
+          resolve({ success: true, ...result, executionTime });
+        } catch (e) {
+          resolve({ success: false, status: 500, body: { error: 'Parse error' }, executionTime });
+        }
+      } else if (stderr) {
+        resolve({ success: false, status: 500, body: { error: stderr.trim() }, executionTime });
+      } else {
+        resolve({ success: true, status: 200, body: stdout.trim() || null, executionTime });
+      }
+    });
+    
+    child.on('error', (error) => {
+      try { unlinkSync(tempFile); } catch (e) {}
+      resolve({ success: false, status: 500, body: { error: `Perl non disponible: ${error.message}` }, executionTime: Date.now() - startTime });
+    });
+    
+    setTimeout(() => { child.kill('SIGTERM'); }, timeout);
+  });
+}
+
+/**
  * Exécute du code dans le langage spécifié
  */
 export async function executeCode(language, code, context, timeout = DEFAULT_TIMEOUT) {
-  const enableJS = process.env.ENABLE_JAVASCRIPT !== 'false';
-  const enablePython = process.env.ENABLE_PYTHON !== 'false';
-  const enableBash = process.env.ENABLE_BASH !== 'false';
-  
   switch (language.toLowerCase()) {
     case 'javascript':
     case 'js':
-      if (!enableJS) {
+      if (process.env.ENABLE_JAVASCRIPT === 'false') {
         return { success: false, status: 503, body: { error: 'JavaScript execution is disabled' } };
       }
       return runJavaScript(code, context, timeout);
       
     case 'python':
     case 'py':
-      if (!enablePython) {
+      if (process.env.ENABLE_PYTHON === 'false') {
         return { success: false, status: 503, body: { error: 'Python execution is disabled' } };
       }
       return runPython(code, context, timeout);
@@ -357,10 +676,38 @@ export async function executeCode(language, code, context, timeout = DEFAULT_TIM
     case 'bash':
     case 'sh':
     case 'shell':
-      if (!enableBash) {
-        return { success: false, status: 503, body: { error: 'Bash execution is disabled' } };
+    case 'powershell':
+      if (process.env.ENABLE_BASH === 'false') {
+        return { success: false, status: 503, body: { error: 'Shell execution is disabled' } };
       }
       return runBash(code, context, timeout);
+      
+    case 'ruby':
+    case 'rb':
+      if (process.env.ENABLE_RUBY === 'false') {
+        return { success: false, status: 503, body: { error: 'Ruby execution is disabled' } };
+      }
+      return runRuby(code, context, timeout);
+      
+    case 'php':
+      if (process.env.ENABLE_PHP === 'false') {
+        return { success: false, status: 503, body: { error: 'PHP execution is disabled' } };
+      }
+      return runPHP(code, context, timeout);
+      
+    case 'go':
+    case 'golang':
+      if (process.env.ENABLE_GO === 'false') {
+        return { success: false, status: 503, body: { error: 'Go execution is disabled' } };
+      }
+      return runGo(code, context, timeout);
+      
+    case 'perl':
+    case 'pl':
+      if (process.env.ENABLE_PERL === 'false') {
+        return { success: false, status: 503, body: { error: 'Perl execution is disabled' } };
+      }
+      return runPerl(code, context, timeout);
       
     default:
       return {

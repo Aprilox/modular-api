@@ -101,12 +101,14 @@ a:hover {
    LOGIN SCREEN
    ============================================ */
 
-#login-screen {
+#login-screen,
+#setup-screen {
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
   padding: 2rem;
+  min-height: 100vh;
 }
 
 .login-container {

@@ -341,7 +341,12 @@
             <option value="header">Header X-API-Key</option>
             <option value="bearer">Bearer Token</option>
             <option value="query">Query Parameter (?api_key=...)</option>
+            <option value="custom">Header personnalisé</option>
           </select>
+          <div id="custom-header-config" class="custom-header-config hidden">
+            <label for="key-custom-header">Nom du header</label>
+            <input type="text" id="key-custom-header" name="customHeader" placeholder="X-My-Custom-Key">
+          </div>
           <div class="auth-method-help" id="auth-method-help">
             <code>X-API-Key: votre_clé</code>
           </div>

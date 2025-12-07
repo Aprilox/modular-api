@@ -524,12 +524,13 @@ async function renderKeys() {
     }
     
     // Auth method display
-    const authMethods = {
-      header: 'Header X-API-Key',
-      bearer: 'Bearer Token',
-      query: 'Query Param'
-    };
     const authMethod = key.authMethod || 'header';
+    let authMethodLabel = {
+      header: 'X-API-Key',
+      bearer: 'Bearer',
+      query: '?api_key',
+      custom: key.customHeader || 'Custom'
+    }[authMethod];
     
     return `
     <div class="key-card" data-id="${key.id}">
@@ -538,7 +539,7 @@ async function renderKeys() {
           ${key.name}
           <span class="key-badge ${key.enabled ? 'active' : 'inactive'}">${key.enabled ? 'Active' : 'Inactive'}</span>
         </span>
-        <span class="key-auth-method">${authMethods[authMethod]}</span>
+        <span class="key-auth-method">${authMethodLabel}</span>
       </div>
       <div class="key-value">
         <code>${key.key}</code>
@@ -581,7 +582,9 @@ async function openKeyModal(key = null) {
     document.getElementById('key-id').value = key.id;
     document.getElementById('key-name').value = key.name;
     document.getElementById('key-auth-method').value = key.authMethod || 'header';
+    document.getElementById('key-custom-header').value = key.customHeader || '';
     document.getElementById('key-permissions').value = key.permissions;
+    document.getElementById('custom-header-config').classList.toggle('hidden', (key.authMethod || 'header') !== 'custom');
     document.getElementById('key-quota').checked = key.quotaEnabled;
     document.getElementById('key-quota-limit').value = key.quotaLimit;
     document.getElementById('key-quota-period').value = key.quotaPeriod;
@@ -614,14 +617,27 @@ async function openKeyModal(key = null) {
   modal.classList.remove('hidden');
 }
 
-function updateAuthMethodHelp(method) {
+function updateAuthMethodHelp(method, customHeader = '') {
   const helpEl = document.getElementById('auth-method-help');
+  const keyValue = document.getElementById('key-id').value ? 
+    (keys.find(k => k.id === document.getElementById('key-id').value)?.key || 'votre_clé') : 
+    'votre_clé';
+  
+  const headerName = customHeader || document.getElementById('key-custom-header')?.value || 'X-Custom-Key';
+  
   const helps = {
-    header: '<code>X-API-Key: votre_clé</code>',
-    bearer: '<code>Authorization: Bearer votre_clé</code>',
-    query: '<code>?api_key=votre_clé</code>'
+    header: `<code>X-API-Key: ${keyValue}</code>`,
+    bearer: `<code>Authorization: Bearer ${keyValue}</code>`,
+    query: `<code>?api_key=${keyValue}</code>`,
+    custom: `<code>${headerName}: ${keyValue}</code>`
   };
   helpEl.innerHTML = helps[method] || helps.header;
+  
+  // Show/hide custom header input
+  const customConfig = document.getElementById('custom-header-config');
+  if (customConfig) {
+    customConfig.classList.toggle('hidden', method !== 'custom');
+  }
 }
 
 async function loadRoutesForPermissions() {
@@ -674,8 +690,11 @@ function editKey(id) {
 
 async function saveKey(formData) {
   const id = formData.get('id');
+  const authMethod = formData.get('authMethod') || 'header';
   const data = {
     name: formData.get('name'),
+    authMethod: authMethod,
+    customHeader: authMethod === 'custom' ? formData.get('customHeader') : null,
     permissions: formData.get('permissions') || '*',
     quotaEnabled: formData.get('quotaEnabled') === 'on',
     quotaLimit: parseInt(formData.get('quotaLimit')) || 10000,
@@ -887,6 +906,16 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('key-permissions-all').addEventListener('change', (e) => {
     document.getElementById('routes-permissions-list').classList.toggle('hidden', e.target.checked);
     updatePermissionsValue();
+  });
+  
+  // Auth method change
+  document.getElementById('key-auth-method').addEventListener('change', (e) => {
+    updateAuthMethodHelp(e.target.value);
+  });
+  
+  // Custom header input change
+  document.getElementById('key-custom-header').addEventListener('input', (e) => {
+    updateAuthMethodHelp('custom', e.target.value);
   });
   
   // Modal close buttons

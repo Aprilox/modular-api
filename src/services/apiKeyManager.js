@@ -118,9 +118,15 @@ export async function checkAndUpdateQuota(prisma, apiKeyId) {
 }
 
 /**
- * Extrait la clé API de la requête
+ * Extrait la clé API de la requête selon différentes méthodes
  */
-export function extractApiKey(request) {
+export function extractApiKey(request, customHeader = null) {
+  // Custom header
+  if (customHeader) {
+    const customKey = request.headers[customHeader.toLowerCase()];
+    if (customKey) return customKey;
+  }
+  
   // Header X-API-Key
   const headerKey = request.headers['x-api-key'];
   if (headerKey) return headerKey;
@@ -139,6 +145,31 @@ export function extractApiKey(request) {
   }
   
   return null;
+}
+
+/**
+ * Extrait la clé API selon la méthode spécifiée
+ */
+export function extractApiKeyByMethod(request, method, customHeader = null) {
+  switch (method) {
+    case 'header':
+      return request.headers['x-api-key'];
+    case 'bearer':
+      const authHeader = request.headers['authorization'];
+      if (authHeader?.startsWith('Bearer ')) {
+        return authHeader.slice(7);
+      }
+      return null;
+    case 'query':
+      return request.query?.api_key || request.query?.apikey;
+    case 'custom':
+      if (customHeader) {
+        return request.headers[customHeader.toLowerCase()];
+      }
+      return null;
+    default:
+      return extractApiKey(request, customHeader);
+  }
 }
 
 /**

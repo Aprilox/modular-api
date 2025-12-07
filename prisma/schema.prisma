@@ -58,6 +58,10 @@ model ApiKey {
   name        String   // Nom descriptif
   key         String   @unique // La clé elle-même
   
+  // Méthode d'authentification
+  authMethod  String   @default("header") // header, bearer, query, custom
+  customHeader String? // Header personnalisé (si authMethod = custom)
+  
   // Permissions
   permissions String   @default("*") // * pour tout, ou liste de route IDs séparés par virgule
   

@@ -1169,6 +1169,18 @@ textarea::placeholder {
   font-size: 0.75rem;
 }
 
+.custom-header-config {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: var(--gray-50);
+  border-radius: var(--border-radius-sm);
+}
+
+.custom-header-config label {
+  font-size: 0.8rem;
+  margin-bottom: 0.35rem;
+}
+
 /* Key permissions display */
 .key-permissions-list {
   display: flex;

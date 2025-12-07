@@ -185,6 +185,12 @@ async function logout() {
   
   token = null;
   localStorage.removeItem('token');
+  
+  // Fermer tous les modals ouverts
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.classList.add('hidden');
+  });
+  
   showLoginScreen();
   showToast('Déconnexion réussie', 'info');
 }

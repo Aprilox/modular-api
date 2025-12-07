@@ -204,20 +204,11 @@ function openIDE() {
   const language = document.getElementById('route-language').value;
   const code = document.getElementById('route-code').value;
   
-  // Update language badge
-  document.getElementById('ide-language-badge').textContent = language;
+  // Update language select
+  document.getElementById('ide-language-select').value = language;
   
   // Update help text
-  const helps = {
-    javascript: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
-    python: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`,
-    php: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json($data, $status), respond($data, $status, $headers)`,
-    ruby: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
-    go: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> jsonResp(data, status), respond(data, status, headers)`,
-    perl: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json_resp($data, $status), respond($data, $status, $headers)`,
-    bash: `<strong>Variables d'env:</strong> REQUEST_METHOD, REQUEST_PATH, REQUEST_QUERY, REQUEST_BODY | <strong>Sortie:</strong> echo / Write-Output`
-  };
-  document.getElementById('ide-help').innerHTML = helps[language] || helps.javascript;
+  updateIDEHelp(language);
   
   // Initialize or update CodeMirror
   if (!ideEditor) {
@@ -244,6 +235,33 @@ function openIDE() {
     ideEditor.refresh();
     ideEditor.focus();
   }, 100);
+}
+
+function updateIDEHelp(language) {
+  const helps = {
+    javascript: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
+    python: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`,
+    php: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json($data, $status), respond($data, $status, $headers)`,
+    ruby: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
+    go: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> jsonResp(data, status), respond(data, status, headers)`,
+    perl: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json_resp($data, $status), respond($data, $status, $headers)`,
+    bash: `<strong>Variables d'env:</strong> REQUEST_METHOD, REQUEST_PATH, REQUEST_QUERY, REQUEST_BODY | <strong>Sortie:</strong> echo / Write-Output`
+  };
+  document.getElementById('ide-help').innerHTML = helps[language] || helps.javascript;
+}
+
+function changeIDELanguage(language) {
+  // Update CodeMirror mode
+  if (ideEditor) {
+    ideEditor.setOption('mode', getCodeMirrorMode(language));
+  }
+  
+  // Update help text
+  updateIDEHelp(language);
+  
+  // Sync with route form
+  document.getElementById('route-language').value = language;
+  updateCodeHelp(language);
 }
 
 function applyCodeFromIDE() {
@@ -880,6 +898,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // IDE
   document.getElementById('btn-open-ide').addEventListener('click', openIDE);
   document.getElementById('btn-apply-code').addEventListener('click', applyCodeFromIDE);
+  document.getElementById('ide-language-select').addEventListener('change', (e) => {
+    changeIDELanguage(e.target.value);
+  });
   
   // Navigation
   document.querySelectorAll('.nav-item[data-section]').forEach(item => {

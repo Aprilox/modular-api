@@ -1057,6 +1057,33 @@ textarea::placeholder {
   text-transform: capitalize;
 }
 
+.ide-language-select {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--gray-800);
+  color: var(--white);
+  border: 1px solid var(--gray-600);
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+}
+
+.ide-language-select:hover {
+  border-color: var(--primary-light);
+}
+
+.ide-language-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+.ide-language-select option {
+  background: var(--gray-800);
+  color: var(--white);
+}
+
 .ide-body {
   flex: 1;
   display: flex;

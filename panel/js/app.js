@@ -87,15 +87,7 @@ function updateCodeHelp(language) {
                  <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
     python: `<strong>Variables:</strong> request, params, query, body, headers<br>
              <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`,
-    php: `<strong>Variables:</strong> $request, $params, $query, $body, $headers<br>
-          <strong>Fonctions:</strong> json($data, $status), respond($data, $status, $headers)`,
-    ruby: `<strong>Variables:</strong> request, params, query, body, headers<br>
-           <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
-    go: `<strong>Variables:</strong> request, params, query, body, headers (map[string]interface{})<br>
-         <strong>Fonctions:</strong> jsonResp(data, status), respond(data, status, headers)`,
-    perl: `<strong>Variables:</strong> $request, $params, $query, $body, $headers<br>
-           <strong>Fonctions:</strong> json_resp($data, $status), respond($data, $status, $headers)`,
-    bash: `<strong>Sortie:</strong> Retournez du JSON, ex: Write-Output '{"key":"value"}'`
+    bash: `<strong>Sortie:</strong> Retournez du JSON, ex: ConvertTo-Json @{key="value"}`
   };
   helpEl.innerHTML = helps[language] || helps.javascript;
 }
@@ -189,10 +181,6 @@ function getCodeMirrorMode(language) {
   const modes = {
     javascript: 'javascript',
     python: 'python',
-    php: 'php',
-    ruby: 'ruby',
-    go: 'go',
-    perl: 'perl',
     bash: 'shell'
   };
   return modes[language] || 'javascript';
@@ -240,11 +228,7 @@ function updateIDEHelp(language) {
   const helps = {
     javascript: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
     python: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json_response(data, status), respond(data, status, headers)`,
-    php: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json($data, $status), respond($data, $status, $headers)`,
-    ruby: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> json(data, status), respond(data, status, headers)`,
-    go: `<strong>Variables:</strong> request, params, query, body, headers | <strong>Fonctions:</strong> jsonResp(data, status), respond(data, status, headers)`,
-    perl: `<strong>Variables:</strong> $request, $params, $query, $body, $headers | <strong>Fonctions:</strong> json_resp($data, $status), respond($data, $status, $headers)`,
-    bash: `<strong>Sortie:</strong> Retournez du JSON directement, ex: Write-Output '{"key":"value"}'`
+    bash: `<strong>Sortie:</strong> Retournez du JSON, ex: ConvertTo-Json @{key="value"}`
   };
   document.getElementById('ide-help').innerHTML = helps[language] || helps.javascript;
 }

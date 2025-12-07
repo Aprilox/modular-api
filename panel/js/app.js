@@ -123,6 +123,8 @@ function showDashboard() {
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('dashboard').classList.remove('hidden');
   loadDashboardData();
+  // Vérifier les dépendances manquantes en arrière-plan
+  checkMissingDependencies();
 }
 
 async function login(password) {
@@ -924,6 +926,8 @@ async function clearLogs() {
 let dependencies = [];
 let depFilter = 'all';
 
+let missingDepsCount = 0;
+
 async function loadDependencies() {
   try {
     const data = await api('/admin/dependencies');
@@ -934,46 +938,153 @@ async function loadDependencies() {
   }
 }
 
-function renderDependencies() {
+async function checkMissingDependencies() {
+  try {
+    const routesData = await api('/admin/routes');
+    let allMissing = [];
+    
+    for (const route of routesData.routes) {
+      if (route.language === 'javascript' || route.language === 'python') {
+        const result = await api('/admin/dependencies/detect', {
+          method: 'POST',
+          body: JSON.stringify({ code: route.code, language: route.language })
+        });
+        
+        const missing = result.packages.filter(p => !p.installed);
+        missing.forEach(m => {
+          if (!allMissing.find(x => x.name === m.name)) {
+            allMissing.push({ ...m, route: route.name, language: route.language });
+          }
+        });
+      }
+    }
+    
+    missingDepsCount = allMissing.length;
+    updateDepsBadge();
+    
+    return allMissing;
+  } catch (e) {
+    console.error('Erreur vérification dépendances:', e);
+    return [];
+  }
+}
+
+function updateDepsBadge() {
+  const navItem = document.querySelector('.nav-item[data-section="dependencies"]');
+  let badge = navItem.querySelector('.nav-badge');
+  
+  if (missingDepsCount > 0) {
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      navItem.appendChild(badge);
+    }
+    badge.textContent = missingDepsCount;
+    badge.title = `${missingDepsCount} dépendance(s) manquante(s)`;
+  } else if (badge) {
+    badge.remove();
+  }
+}
+
+async function renderDependencies() {
   const container = document.getElementById('deps-list');
+  
+  // Vérifier les dépendances manquantes
+  const missing = await checkMissingDependencies();
   
   let filtered = dependencies;
   if (depFilter !== 'all') {
     filtered = dependencies.filter(d => d.language === depFilter);
   }
   
-  if (!filtered.length) {
-    container.innerHTML = '<p class="empty-state">Aucune dépendance installée</p>';
-    return;
+  let html = '';
+  
+  // Afficher les dépendances manquantes en premier
+  const filteredMissing = depFilter === 'all' ? missing : missing.filter(m => m.language === depFilter);
+  if (filteredMissing.length > 0) {
+    html += `<div class="missing-deps-section">
+      <h4 class="missing-deps-title">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+        Dépendances manquantes (${filteredMissing.length})
+      </h4>
+      <div class="missing-deps-grid">
+        ${filteredMissing.map(m => `
+          <div class="dep-card missing">
+            <div class="dep-card-header">
+              <span class="dep-name">
+                ${m.name}
+                <span class="dep-lang-badge ${m.language}">${m.language === 'javascript' ? 'JS' : 'PY'}</span>
+              </span>
+            </div>
+            <div class="dep-meta">
+              <div class="dep-meta-item" style="color: var(--danger);">
+                ❌ Requis par la route "${m.route}"
+              </div>
+            </div>
+            <div class="dep-card-footer">
+              <button class="btn btn-sm btn-primary" onclick="quickInstallDep('${m.name}', '${m.language}')">
+                <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                Installer
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
   }
   
-  container.innerHTML = filtered.map(dep => `
-    <div class="dep-card" data-id="${dep.id}">
-      <div class="dep-card-header">
-        <span class="dep-name">
-          ${dep.name}
-          <span class="dep-lang-badge ${dep.language}">${dep.language === 'javascript' ? 'JS' : 'PY'}</span>
-        </span>
-      </div>
-      <div class="dep-meta">
-        <div class="dep-meta-item">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
-          Installé le ${formatDate(dep.installedAt)}
+  // Dépendances installées
+  if (filtered.length > 0) {
+    html += filtered.map(dep => `
+      <div class="dep-card" data-id="${dep.id}">
+        <div class="dep-card-header">
+          <span class="dep-name">
+            ${dep.name}
+            <span class="dep-lang-badge ${dep.language}">${dep.language === 'javascript' ? 'JS' : 'PY'}</span>
+          </span>
+        </div>
+        <div class="dep-meta">
+          <div class="dep-meta-item">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+            Installé le ${formatDate(dep.installedAt)}
+          </div>
+        </div>
+        <div class="dep-used-by">
+          ${dep.usedByCount > 0 
+            ? `Utilisé par ${dep.usedByCount} route(s): ${dep.usedByRoutes.map(r => `<span class="route-tag">${r.path}</span>`).join('')}` 
+            : '<span style="color: var(--warning);">⚠️ Non utilisé</span>'}
+        </div>
+        <div class="dep-card-footer">
+          <button class="btn btn-sm btn-danger" onclick="uninstallDependency('${dep.id}', '${dep.name}')">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+            Désinstaller
+          </button>
         </div>
       </div>
-      <div class="dep-used-by">
-        ${dep.usedByCount > 0 
-          ? `Utilisé par ${dep.usedByCount} route(s): ${dep.usedByRoutes.map(r => `<span class="route-tag">${r.path}</span>`).join('')}` 
-          : '<span style="color: var(--warning);">⚠️ Non utilisé</span>'}
-      </div>
-      <div class="dep-card-footer">
-        <button class="btn btn-sm btn-danger" onclick="uninstallDependency('${dep.id}', '${dep.name}')">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-          Désinstaller
-        </button>
-      </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
+  
+  if (!html) {
+    html = '<p class="empty-state">Aucune dépendance installée</p>';
+  }
+  
+  container.innerHTML = html;
+}
+
+async function quickInstallDep(name, language) {
+  showToast(`Installation de ${name}...`, 'info');
+  
+  try {
+    await api('/admin/dependencies', {
+      method: 'POST',
+      body: JSON.stringify({ name, language })
+    });
+    
+    showToast(`${name} installé avec succès`, 'success');
+    loadDependencies();
+  } catch (e) {
+    showToast(`Erreur: ${e.message}`, 'error');
+  }
 }
 
 function openDepModal() {
